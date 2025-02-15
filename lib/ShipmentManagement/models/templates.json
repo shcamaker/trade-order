@@ -1,0 +1,211 @@
+{
+  "templates": [
+    {
+      "id": 1,
+      "name": "出口货物明细单",
+      "backgroundColor": "#B0C4DE",
+      "editableInfos": [
+        {
+          "name": "出口口岸",
+          "key": "exportPort",
+          "hintText": "请选择出口口岸",
+          "isSelectable": true,
+          "isEditable": true,
+          "isNumericField": false,
+          "supportDefault": true,
+          "options": ["ALASHANKOU", "KHORGOS"]
+        },
+        {
+          "name": "运输工具名称",
+          "key": "transportMode",
+          "hintText": "请选择运输工具",
+          "isSelectable": true,
+          "isEditable": true,
+          "isNumericField": false,
+          "supportDefault": true,
+          "options": ["铁路", "公路", "水运", "航空"]
+        },
+        {
+          "name": "经营单位",
+          "key": "businessUnit",
+          "hintText": "请选择经营单位",
+          "isSelectable": true,
+          "supportDefault": true,
+          "isEditable": true,
+          "options": ["中国外运", "中储股份", "中远海运"],
+          "isNumericField": false
+        },
+        {
+          "name": "贸易国别",
+          "key": "tradeCountry",
+          "hintText": "请选择贸易国别",
+          "isSelectable": true,
+          "supportDefault": true,
+          "isEditable": true,
+          "options": ["哈萨克斯坦", "俄罗斯", "蒙古", "乌兹别克斯坦"],
+          "isNumericField": false
+        },
+        {
+          "name": "指运港",
+          "key": "destinationPort",
+          "hintText": "请选择指运港",
+          "isSelectable": true,
+          "supportDefault": true,
+          "isEditable": true,
+          "options": ["阿拉木图", "莫斯科", "乌兰巴托", "塔什干"],
+          "isNumericField": false
+        },
+        {
+          "name": "消费国别",
+          "key": "consumptionCountry",
+          "hintText": "请选择消费国别",
+          "isSelectable": true,
+          "supportDefault": true,
+          "isEditable": true,
+          "options": ["哈萨克斯坦", "俄罗斯", "蒙古", "乌兹别克斯坦"],
+          "isNumericField": false
+        },
+        {
+          "name": "商品编码",
+          "key": "commodityCode",
+          "hintText": "请选择商品编码",
+          "isSelectable": true,
+          "supportDefault": true,
+          "options": ["84159010", "84158110", "84158210"],
+          "isEditable": true,
+          "isNumericField": false
+        },
+        {
+          "name": "货物名称",
+          "key": "goodsName",
+          "hintText": "请选择货物名称",
+          "isSelectable": true,
+          "supportDefault": true,
+          "options": ["空调", "冰箱", "洗衣机"],
+          "isEditable": true,
+          "isNumericField": false
+        },
+        {
+          "name": "数量单位",
+          "key": "quantityUnit",
+          "hintText": "请选择数量单位",
+          "isSelectable": true,
+          "supportDefault": true,
+          "options": ["台", "件", "套"],
+          "isEditable": true,
+          "isNumericField": false
+        },
+        {
+          "name": "重量单位",
+          "key": "weightUnit",
+          "hintText": "请选择重量单位",
+          "isSelectable": true,
+          "supportDefault": true,
+          "options": ["千克", "吨"],
+          "isEditable": true,
+          "isNumericField": false
+        },
+        {
+          "name": "币别",
+          "key": "currency",
+          "hintText": "请选择币别",
+          "isSelectable": true,
+          "supportDefault": true,
+          "options": ["美元", "人民币", "欧元"],
+          "isEditable": true,
+          "isNumericField": false
+        },
+        {
+          "name": "合同号",
+          "key": "contractNumber",
+          "hintText": "请输入合同号",
+          "isSelectable": false,
+          "supportDefault": true,
+          "isEditable": true,
+          "isNumericField": false
+        },
+        {
+          "name": "起运地点",
+          "key": "departurePlace",
+          "hintText": "请输入起运地点",
+          "isSelectable": false,
+          "supportDefault": true,
+          "isEditable": true,
+          "isNumericField": false
+        },
+        {
+          "name": "件数",
+          "key": "pieces",
+          "hintText": "请输入件数",
+          "isSelectable": false,
+          "supportDefault": true,
+          "isEditable": true,
+          "isNumericField": true
+        },
+        {
+          "name": "数量",
+          "key": "quantity",
+          "hintText": "请输入数量",
+          "isSelectable": false,
+          "supportDefault": true,
+          "isEditable": true,
+          "isNumericField": true
+        },
+        {
+          "name": "毛重",
+          "key": "grossWeight",
+          "hintText": "请输入毛重",
+          "isSelectable": false,
+          "supportDefault": false,
+          "isEditable": true,
+          "isNumericField": true
+        },
+        {
+          "name": "净重",
+          "key": "netWeight",
+          "hintText": "请输入净重",
+          "isSelectable": false,
+          "supportDefault": false,
+          "isEditable": true,
+          "isNumericField": true
+        },
+        {
+          "name": "单价",
+          "key": "unitPrice",
+          "hintText": "请输入单价",
+          "isSelectable": false,
+          "supportDefault": false,
+          "isEditable": true,
+          "isNumericField": true
+        },
+        {
+          "name": "总金额",
+          "key": "totalAmount",
+          "hintText": "自动计算",
+          "isSelectable": false,
+          "supportDefault": false,
+          "isEditable": false,
+          "isNumericField": true
+        },
+        {
+          "name": "结汇方式",
+          "key": "settleType",
+          "hintText": "请输入结汇方式",
+          "isSelectable": false,
+          "supportDefault": true,
+          "isEditable": true,
+          "isNumericField": false
+        },
+        {
+          "name": "备注",
+          "key": "remarkNum",
+          "hintText": "请输入备注",
+          "isSelectable": false,
+          "supportDefault": true,
+          "isEditable": true,
+          "isNumericField": false
+        }
+      ]
+    }
+  ]
+}

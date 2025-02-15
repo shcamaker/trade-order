@@ -1,0 +1,35 @@
+B
+# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
+export PATH="$PATH:$HOME/.rvm/bin"
+export NVM_DIR="$HOME/.nvm"
+export PATH="$PATH:/Users/shenhaichao/develop/Flutter/flutter/bin"
+export PATH="$PATH:/Users/shenhaichao/develop/Flutter/flutter/bin/cache/dart_sdk/bin"
+export PATH="$PATH:/Users/shenhaichao/Library/Python/3.9/bin"
+export PATH="$PATH:/Users/shenhaichao/miniconda3/bin"
+export PATH="$PATH":"$HOME/.pub-cache/bin"
+# flutter 网络代理
+export PUB_HOSTED_URL=https://pub.flutter-io.cn
+export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+
+export SONAR_RUNNER_HOME=/usr/local/sonar-scanner
+export PATH=$PATH:$SONAR_RUNNER_HOME/bin
+
+export PATH=`pwd`/infer/bin:$PATH
+alias python=/usr/bin/python3
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/Users/shenhaichao/miniconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/Users/shenhaichao/miniconda3/etc/profile.d/conda.sh" ]; then
+        . "/Users/shenhaichao/miniconda3/etc/profile.d/conda.sh"
+    else
+        export PATH="/Users/shenhaichao/miniconda3/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
+
