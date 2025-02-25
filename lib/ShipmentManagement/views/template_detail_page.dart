@@ -4,7 +4,6 @@ import '../models/template_model.dart';
 import '../services/api_service.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
 
 class TemplateDetailPage extends StatefulWidget {
   final TemplateModel template;
@@ -27,7 +26,7 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
   @override
   void initState() {
     super.initState();
-    _loadDocument();
+    _previewDocument();
   }
 
   @override
@@ -64,11 +63,11 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
   }
 
   Future<void> _downloadDocument() async {
-    final filePath = await ApiService.downloadDocument(
-        widget.updatedDetails, widget.template.name);
+    final filePath = await ApiService.generateDocument(
+        widget.updatedDetails, widget.template.name, Format.docx.value);
     if (!mounted) return;
 
-    if (filePath.isNotEmpty) {
+    if (File(filePath).existsSync()) {
       await Share.shareXFiles(
         [XFile(filePath)],
         text: '分享文档：${widget.template.name}',
@@ -85,20 +84,14 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
     }
   }
 
-  void _loadDocument() async {
+  void _previewDocument() async {
     try {
-      await ApiService.generateDocument(
-          widget.updatedDetails, "${widget.template.name}.docx");
+      final pdfPath = await ApiService.generateDocument(
+          widget.updatedDetails, widget.template.name, Format.pdf.value);
 
-      // 下载PDF预览文件
-      final directory = await getApplicationDocumentsDirectory();
-      final pdfPath = '${directory.path}/templates/${widget.template.name}.pdf';
-
-      // 如果文件不存在，尝试从网络下载
-      final response = await ApiService.downloadPdf(widget.template.name);
-      if (response != null) {
+      if (File(pdfPath).existsSync()) {
         setState(() {
-          _localPdfPath = response;
+          _localPdfPath = pdfPath;
           _isLoading = false;
         });
       } else {

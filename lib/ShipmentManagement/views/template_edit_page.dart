@@ -69,6 +69,9 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
 
   // 添加清除所有默认值的方法
   Future<void> _clearAllDefaults() async {
+    if (!mounted) return;
+
+    // 清除所有默认值
     for (var info in widget.template.editableInfos ?? []) {
       await _prefs.remove('default_${info.key}');
     }
@@ -80,11 +83,9 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
       }
     });
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已清除所有默认值')),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('已清除所有默认值')),
+    );
   }
 
   @override

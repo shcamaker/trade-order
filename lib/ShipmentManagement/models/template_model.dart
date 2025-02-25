@@ -65,3 +65,11 @@ class TemplateModel {
     );
   }
 }
+
+enum Format {
+  docx('docx'),
+  pdf('pdf');
+
+  final String value;
+  const Format(this.value);
+}

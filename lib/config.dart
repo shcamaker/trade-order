@@ -4,7 +4,7 @@ class Config {
   // API 基础URL
   static String get baseUrl {
     if (isProduction) {
-      return 'https://trade-order.vercel.app'; // 你的 Vercel 应用 URL
+      return 'https://trade-order-api.vercel.app'; // Vercel 部署的 API 地址
     }
     return 'http://localhost:8000';
   }
