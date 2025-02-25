@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../models/template_model.dart';
 import '../services/api_service.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 class TemplateDetailPage extends StatefulWidget {
   final TemplateModel template;
@@ -20,6 +22,7 @@ class TemplateDetailPage extends StatefulWidget {
 
 class _TemplateDetailPageState extends State<TemplateDetailPage> {
   bool _isLoading = true;
+  String? _localPdfPath;
 
   @override
   void initState() {
@@ -48,8 +51,15 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SfPdfViewer.network(
-              "http://127.0.0.1:8000/api/documents/${widget.template.name}.pdf"),
+          : _localPdfPath != null
+              ? PDFView(
+                  filePath: _localPdfPath!,
+                  enableSwipe: true,
+                  swipeHorizontal: false,
+                  autoSpacing: false,
+                  pageFling: true,
+                )
+              : const Center(child: Text('无法加载PDF')),
     );
   }
 
@@ -58,11 +68,10 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
         widget.updatedDetails, widget.template.name);
     if (!mounted) return;
 
-    // 添加空值检查
     if (filePath.isNotEmpty) {
       await Share.shareXFiles(
         [XFile(filePath)],
-        text: '分享文档：${widget.template.name}', // 修复字符串插值语法
+        text: '分享文档：${widget.template.name}',
       ).catchError((error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('分享失败: $error')),
@@ -77,16 +86,32 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
   }
 
   void _loadDocument() async {
-    await ApiService.generateDocument(
-        widget.updatedDetails, "${widget.template.name}.docx");
+    try {
+      await ApiService.generateDocument(
+          widget.updatedDetails, "${widget.template.name}.docx");
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('文档生成成功')),
-      );
-      setState(() {
-        _isLoading = false;
-      });
+      // 下载PDF预览文件
+      final directory = await getApplicationDocumentsDirectory();
+      final pdfPath = '${directory.path}/templates/${widget.template.name}.pdf';
+
+      // 如果文件不存在，尝试从网络下载
+      final response = await ApiService.downloadPdf(widget.template.name);
+      if (response != null) {
+        setState(() {
+          _localPdfPath = response;
+          _isLoading = false;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('无法加载PDF')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('文档生成失败: $e')),
+        );
+      }
     }
   }
 }
