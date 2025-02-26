@@ -45,17 +45,6 @@ jobs:
           --no-tree-shake-icons \
           --verbose
     
-    - name: Debug Build Output
-      run: |
-        echo "=== Build Directory Contents ==="
-        ls -la
-        echo "=== Index HTML Content ==="
-        cat index.html
-        echo "=== JavaScript Files ==="
-        ls -la *.js || true
-        echo "=== Checking Web Resources ==="
-        find . -type f
-    
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
