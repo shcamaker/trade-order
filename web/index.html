@@ -32,17 +32,27 @@
   <title>order_management_systerm</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- 添加性能和错误处理脚本 -->
+  <!-- 调试脚本加载 -->
   <script>
+    // 记录脚本加载错误
+    window.addEventListener('error', function(event) {
+      console.error('Script load error:', {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        error: event.error
+      });
+    });
+
     // 增加 Service Worker 超时处理
     window.addEventListener('load', () => {
       if ('serviceWorker' in navigator) {
-        // 延长超时时间
         setTimeout(() => {
           navigator.serviceWorker.ready.catch(error => {
             console.warn('Service Worker registration failed or timed out:', error);
           });
-        }, 8000);  // 延长到 8 秒
+        }, 4000);
       }
     });
 
@@ -53,9 +63,29 @@
         console.warn('Ignored .map file loading error');
       }
     });
+
+    // 动态检查并加载 flutter_bootstrap.js
+    function loadBootstrapScript() {
+      const script = document.createElement('script');
+      script.src = 'flutter_bootstrap.js';
+      script.async = true;
+      script.onerror = function() {
+        console.error('Failed to load flutter_bootstrap.js');
+        // 尝试加载 flutter.js 作为备选
+        const fallbackScript = document.createElement('script');
+        fallbackScript.src = 'flutter.js';
+        fallbackScript.async = true;
+        document.body.appendChild(fallbackScript);
+      };
+      document.body.appendChild(script);
+    }
+
+    // 页面加载后尝试加载引导脚本
+    window.addEventListener('DOMContentLoaded', loadBootstrapScript);
   </script>
 </head>
 <body>
+  <!-- 保留原有的脚本引用，但增加了动态加载逻辑 -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

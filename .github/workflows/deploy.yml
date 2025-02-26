@@ -36,7 +36,7 @@ jobs:
           
       - name: Build Flutter Web
         run: |
-          flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+          flutter build web --release --base-href "/${{ github.event.repository.name }}/" --verbose
           echo "=== Build Directory Contents ==="
           ls -la build/web
           echo "=== Index HTML Content ==="
@@ -46,6 +46,8 @@ jobs:
           ls -la build/web/*.js
           echo "=== Checking Web Resources ==="
           find build/web -type f
+          echo "=== Checking Flutter Web Build Logs ==="
+          cat ~/flutter_build.log || true
         
       - name: Setup Pages
         uses: actions/configure-pages@v4
