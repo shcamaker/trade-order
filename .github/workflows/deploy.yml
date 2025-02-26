@@ -33,11 +33,13 @@ jobs:
     
     - name: Install dependencies
       run: |
+        cd order_management_systerm
         flutter pub get
         flutter config --enable-web
     
     - name: Build Web App
       run: |
+        cd order_management_systerm
         flutter build web \
           --release \
           --base-href "/trade-order/" \
@@ -45,10 +47,22 @@ jobs:
           --no-tree-shake-icons \
           --verbose
     
+    - name: Debug Build Output
+      run: |
+        cd order_management_systerm/build/web
+        echo "=== Build Directory Contents ==="
+        ls -la
+        echo "=== Index HTML Content ==="
+        cat index.html
+        echo "=== JavaScript Files ==="
+        ls -la *.js || true
+        echo "=== Checking Web Resources ==="
+        find . -type f
+    
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: '../build/web'
+        path: 'order_management_systerm/build/web'
   
   deploy:
     needs: build
