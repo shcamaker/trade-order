@@ -1,78 +1,74 @@
-name: Deploy Flutter Web to GitHub Pages
+name: Flutter Web Deploy
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
-
-# 明确设置权限
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # 明确指定环境
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.0'
+        channel: 'stable'
+    
+    - name: Print Flutter and Dart versions
+      run: |
+        flutter --version
+        dart --version
+    
+    - name: Install dependencies
+      run: |
+        cd order_management_systerm
+        flutter pub get
+        flutter config --enable-web
+    
+    - name: Build Web App
+      run: |
+        cd order_management_systerm
+        flutter build web \
+          --release \
+          --base-href "/trade-order/" \
+          --web-renderer html \
+          --no-tree-shake-icons \
+          --verbose
+    
+    - name: Debug Build Output
+      run: |
+        cd order_management_systerm/build/web
+        echo "=== Build Directory Contents ==="
+        ls -la
+        echo "=== Index HTML Content ==="
+        cat index.html
+        echo "=== JavaScript Files ==="
+        ls -la *.js
+        echo "=== Checking Web Resources ==="
+        find . -type f
+    
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: 'order_management_systerm/build/web'
+  
+  deploy:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
+    
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        
-      - name: Setup Flutter SDK
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.0'
-          channel: 'stable'
-          
-      - name: Install dependencies
-        run: |
-          flutter pub get
-          flutter config --enable-web
-          
-      - name: Build Flutter Web
-        run: |
-          flutter build web --release --base-href "/${{ github.event.repository.name }}/" --web-renderer html --no-tree-shake-icons --verbose
-          echo "=== Build Directory Contents ==="
-          ls -la build/web
-          echo "=== Index HTML Content ==="
-          cat build/web/index.html
-          echo "=== JavaScript Files ==="
-          ls -la build/web/flutter_bootstrap.js || true
-          ls -la build/web/*.js
-          echo "=== Checking Web Resources ==="
-          find build/web -type f
-          echo "=== Checking Flutter Web Build Logs ==="
-          cat ~/flutter_build.log || true
-          
-          # 额外的调试信息
-          echo "=== Checking Flutter Version ==="
-          flutter --version
-          echo "=== Checking Dart Version ==="
-          dart --version
-        
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-        
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './build/web'
-          
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-        
-      - name: Verify Deployment
-        run: |
-          echo "Deployment URL: ${{ steps.deployment.outputs.page_url }}"
-          curl -v ${{ steps.deployment.outputs.page_url }} || true
-          echo "=== Checking Deployed Files ==="
-          git clone https://github.com/${{ github.repository }}.git gh-pages-clone
-          cd gh-pages-clone
-          git checkout gh-pages
-          ls -la 
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4 

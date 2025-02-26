@@ -32,7 +32,6 @@
   <title>order_management_systerm</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- 调试脚本加载 -->
   <script>
     // 全局错误处理和调试
     window.addEventListener('error', function(event) {
@@ -59,15 +58,16 @@
     function tryLoadBootstrapScript() {
       console.log('尝试加载引导脚本');
       
-      // 尝试加载多个可能的脚本
       const scriptCandidates = [
-        'flutter_bootstrap.js',
-        'flutter.js'
+        'flutter.js',  // 优先尝试 flutter.js
+        'flutter_bootstrap.js'  // 备选方案
       ];
 
       function tryNextScript(index) {
         if (index >= scriptCandidates.length) {
           console.error('所有引导脚本加载失败');
+          // 可以在这里添加用户友好的错误提示
+          document.body.innerHTML = '<div style="color:red;">应用加载失败，请刷新页面或稍后重试。</div>';
           return;
         }
 
@@ -76,7 +76,10 @@
 
         loadScript(
           scriptSrc, 
-          () => console.log(`${scriptSrc} 加载成功`),
+          () => {
+            console.log(`${scriptSrc} 加载成功`);
+            // 如果需要，可以在这里执行额外的初始化操作
+          },
           () => {
             console.warn(`${scriptSrc} 加载失败`);
             tryNextScript(index + 1);
@@ -100,7 +103,6 @@
   </script>
 </head>
 <body>
-  <!-- 保留原有的脚本引用，但增加了动态加载逻辑 -->
-  <script src="flutter_bootstrap.js" async></script>
+  <!-- 移除直接的脚本引用，改为动态加载 -->
 </body>
 </html>
