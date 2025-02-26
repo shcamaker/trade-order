@@ -36,7 +36,7 @@ jobs:
           
       - name: Build Flutter Web
         run: |
-          flutter build web --release --base-href "/${{ github.event.repository.name }}/" --verbose
+          flutter build web --release --base-href "/${{ github.event.repository.name }}/" --web-renderer html --no-tree-shake-icons --verbose
           echo "=== Build Directory Contents ==="
           ls -la build/web
           echo "=== Index HTML Content ==="
@@ -48,6 +48,12 @@ jobs:
           find build/web -type f
           echo "=== Checking Flutter Web Build Logs ==="
           cat ~/flutter_build.log || true
+          
+          # 额外的调试信息
+          echo "=== Checking Flutter Version ==="
+          flutter --version
+          echo "=== Checking Dart Version ==="
+          dart --version
         
       - name: Setup Pages
         uses: actions/configure-pages@v4

@@ -34,7 +34,7 @@
 
   <!-- 调试脚本加载 -->
   <script>
-    // 记录脚本加载错误
+    // 全局错误处理和调试
     window.addEventListener('error', function(event) {
       console.error('Script load error:', {
         message: event.message,
@@ -45,16 +45,47 @@
       });
     });
 
-    // 增加 Service Worker 超时处理
-    window.addEventListener('load', () => {
-      if ('serviceWorker' in navigator) {
-        setTimeout(() => {
-          navigator.serviceWorker.ready.catch(error => {
-            console.warn('Service Worker registration failed or timed out:', error);
-          });
-        }, 4000);
+    // 动态加载脚本的通用函数
+    function loadScript(src, onLoadCallback, onErrorCallback) {
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.onload = onLoadCallback;
+      script.onerror = onErrorCallback;
+      document.body.appendChild(script);
+    }
+
+    // 尝试加载引导脚本的函数
+    function tryLoadBootstrapScript() {
+      console.log('尝试加载引导脚本');
+      
+      // 尝试加载多个可能的脚本
+      const scriptCandidates = [
+        'flutter_bootstrap.js',
+        'flutter.js'
+      ];
+
+      function tryNextScript(index) {
+        if (index >= scriptCandidates.length) {
+          console.error('所有引导脚本加载失败');
+          return;
+        }
+
+        const scriptSrc = scriptCandidates[index];
+        console.log(`尝试加载 ${scriptSrc}`);
+
+        loadScript(
+          scriptSrc, 
+          () => console.log(`${scriptSrc} 加载成功`),
+          () => {
+            console.warn(`${scriptSrc} 加载失败`);
+            tryNextScript(index + 1);
+          }
+        );
       }
-    });
+
+      tryNextScript(0);
+    }
 
     // 忽略 .map 文件加载错误
     window.addEventListener('error', function(event) {
@@ -64,24 +95,8 @@
       }
     });
 
-    // 动态检查并加载 flutter_bootstrap.js
-    function loadBootstrapScript() {
-      const script = document.createElement('script');
-      script.src = 'flutter_bootstrap.js';
-      script.async = true;
-      script.onerror = function() {
-        console.error('Failed to load flutter_bootstrap.js');
-        // 尝试加载 flutter.js 作为备选
-        const fallbackScript = document.createElement('script');
-        fallbackScript.src = 'flutter.js';
-        fallbackScript.async = true;
-        document.body.appendChild(fallbackScript);
-      };
-      document.body.appendChild(script);
-    }
-
     // 页面加载后尝试加载引导脚本
-    window.addEventListener('DOMContentLoaded', loadBootstrapScript);
+    window.addEventListener('DOMContentLoaded', tryLoadBootstrapScript);
   </script>
 </head>
 <body>
