@@ -7,16 +7,21 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout 🛎️
-        uses: actions/checkout@v3
-
-      - name: Setup Flutter 💻
+        uses: actions/checkout@v4
+        
+      - name: Setup Flutter SDK 💻
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.0'
@@ -30,22 +35,27 @@ jobs:
       - name: Build Flutter Web 🏗️
         run: |
           flutter build web --release --base-href "/${{ github.event.repository.name }}/"
-          # 打印构建目录内容
+          echo "=== Build Directory Contents ==="
           ls -la build/web
-          # 检查 index.html 文件
+          echo "=== Index HTML Content ==="
           cat build/web/index.html
+          echo "=== JavaScript Files ==="
+          ls -la build/web/flutter_bootstrap.js
+          ls -la build/web/*.js
         
-      - name: Deploy to GitHub Pages 🚀
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Setup Pages 📄
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact 📦
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build/web
-          force_orphan: true
-          commit_message: "Deploy Flutter web app to GitHub Pages"
+          path: './build/web'
           
-      - name: List published files
+      - name: Deploy to GitHub Pages 🚀
+        id: deployment
+        uses: actions/deploy-pages@v4
+        
+      - name: Verify Deployment 🕵️
         run: |
-          git clone https://github.com/${{ github.repository }}.git gh-pages-clone
-          cd gh-pages-clone
-          git checkout gh-pages
-          ls -la 
+          echo "Deployment URL: ${{ steps.deployment.outputs.page_url }}"
+          curl -v ${{ steps.deployment.outputs.page_url }} || true 
