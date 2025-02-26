@@ -42,7 +42,7 @@ jobs:
           echo "=== Index HTML Content ==="
           cat build/web/index.html
           echo "=== JavaScript Files ==="
-          ls -la build/web/flutter_bootstrap.js
+          ls -la build/web/flutter_bootstrap.js || true
           ls -la build/web/*.js
           echo "=== Checking Web Resources ==="
           find build/web -type f
