@@ -11,4 +11,7 @@ class Config {
 
   // API 超时设置
   static const Duration apiTimeout = Duration(seconds: 30);
+
+  // GitHub Pages 部署的基础路径
+  static const String baseHref = '/trade-order/';
 }

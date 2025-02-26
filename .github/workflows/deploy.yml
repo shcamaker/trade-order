@@ -28,7 +28,12 @@ jobs:
           flutter config --enable-web
           
       - name: Build Flutter Web 🏗️
-        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+        run: |
+          flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+          # 打印构建目录内容
+          ls -la build/web
+          # 检查 index.html 文件
+          cat build/web/index.html
         
       - name: Deploy to GitHub Pages 🚀
         uses: peaceiris/actions-gh-pages@v3
@@ -36,4 +41,11 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build/web
           force_orphan: true
-          commit_message: "Deploy Flutter web app to GitHub Pages" 
+          commit_message: "Deploy Flutter web app to GitHub Pages"
+          
+      - name: List published files
+        run: |
+          git clone https://github.com/${{ github.repository }}.git gh-pages-clone
+          cd gh-pages-clone
+          git checkout gh-pages
+          ls -la 
