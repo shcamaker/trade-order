@@ -47,7 +47,6 @@ jobs:
     
     - name: Debug Build Output
       run: |
-        cd ../build/web
         echo "=== Build Directory Contents ==="
         ls -la
         echo "=== Index HTML Content ==="
