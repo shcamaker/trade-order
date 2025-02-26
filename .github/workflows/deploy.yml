@@ -33,13 +33,11 @@ jobs:
     
     - name: Install dependencies
       run: |
-        cd order_management_systerm
         flutter pub get
         flutter config --enable-web
     
     - name: Build Web App
       run: |
-        cd order_management_systerm
         flutter build web \
           --release \
           --base-href "/trade-order/" \
@@ -49,7 +47,7 @@ jobs:
     
     - name: Debug Build Output
       run: |
-        cd order_management_systerm/build/web
+        cd build/web
         echo "=== Build Directory Contents ==="
         ls -la
         echo "=== Index HTML Content ==="
@@ -62,7 +60,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: 'order_management_systerm/build/web'
+        path: 'build/web'
   
   deploy:
     needs: build
