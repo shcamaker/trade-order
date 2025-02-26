@@ -35,7 +35,17 @@ jobs:
           flutter config --enable-web
           
       - name: Build Flutter Web
-        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+        run: |
+          flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+          echo "=== Build Directory Contents ==="
+          ls -la build/web
+          echo "=== Index HTML Content ==="
+          cat build/web/index.html
+          echo "=== JavaScript Files ==="
+          ls -la build/web/flutter_bootstrap.js
+          ls -la build/web/*.js
+          echo "=== Checking Web Resources ==="
+          find build/web -type f
         
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -49,7 +59,12 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
         
-      - name: Verify Deployment 🕵️
+      - name: Verify Deployment
         run: |
           echo "Deployment URL: ${{ steps.deployment.outputs.page_url }}"
-          curl -v ${{ steps.deployment.outputs.page_url }} || true 
+          curl -v ${{ steps.deployment.outputs.page_url }} || true
+          echo "=== Checking Deployed Files ==="
+          git clone https://github.com/${{ github.repository }}.git gh-pages-clone
+          cd gh-pages-clone
+          git checkout gh-pages
+          ls -la 
