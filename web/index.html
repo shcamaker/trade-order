@@ -34,5 +34,27 @@
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
+  <!-- 添加性能和错误处理脚本 -->
+  <script>
+    // 增加 Service Worker 超时处理
+    window.addEventListener('load', () => {
+      if ('serviceWorker' in navigator) {
+        // 延长超时时间
+        setTimeout(() => {
+          navigator.serviceWorker.ready.catch(error => {
+            console.warn('Service Worker registration failed or timed out:', error);
+          });
+        }, 8000);  // 延长到 8 秒
+      }
+    });
+
+    // 忽略 .map 文件加载错误
+    window.addEventListener('error', function(event) {
+      if (event.filename && event.filename.endsWith('.map')) {
+        event.preventDefault();
+        console.warn('Ignored .map file loading error');
+      }
+    });
+  </script>
 </body>
 </html>
