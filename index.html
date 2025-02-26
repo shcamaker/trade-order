@@ -21,7 +21,7 @@
   <meta name="description" content="A new Flutter project.">
 
   <!-- iOS meta tags & icons -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="order_management_systerm">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
@@ -31,6 +31,18 @@
 
   <title>order_management_systerm</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- 可选：添加超时处理 -->
+  <script>
+    // 增加 Service Worker 加载超时处理
+    window.addEventListener('load', () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.catch(error => {
+          console.warn('Service Worker registration failed:', error);
+        });
+      }
+    });
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
