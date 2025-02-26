@@ -5,53 +5,47 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# 明确设置权限
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
+    # 明确指定环境
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Checkout 🛎️
+      - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Setup Flutter SDK 💻
+      - name: Setup Flutter SDK
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.0'
           channel: 'stable'
           
-      - name: Install dependencies 🔧
+      - name: Install dependencies
         run: |
           flutter pub get
           flutter config --enable-web
           
-      - name: Build Flutter Web 🏗️
-        run: |
-          flutter build web --release --base-href "/${{ github.event.repository.name }}/"
-          echo "=== Build Directory Contents ==="
-          ls -la build/web
-          echo "=== Index HTML Content ==="
-          cat build/web/index.html
-          echo "=== JavaScript Files ==="
-          ls -la build/web/flutter_bootstrap.js
-          ls -la build/web/*.js
+      - name: Build Flutter Web
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
         
-      - name: Setup Pages 📄
+      - name: Setup Pages
         uses: actions/configure-pages@v4
         
-      - name: Upload artifact 📦
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './build/web'
           
-      - name: Deploy to GitHub Pages 🚀
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
         
