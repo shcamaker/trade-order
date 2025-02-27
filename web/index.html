@@ -24,34 +24,153 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="order_management_systerm">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  
+  <!-- 预加载关键资源 -->
+  <link rel="preload" href="main.dart.js" as="script">
+  <link rel="preload" href="assets/MaterialIcons-Regular.otf" as="font" type="font/otf" crossorigin>
+  <link rel="preload" href="assets/CupertinoIcons.ttf" as="font" type="font/ttf" crossorigin>
+  
+  <!-- 字体样式优化 -->
+  <style>
+    @font-face {
+      font-family: 'MaterialIcons';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('assets/MaterialIcons-Regular.otf') format('opentype');
+    }
+    
+    @font-face {
+      font-family: 'CupertinoIcons';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('assets/CupertinoIcons.ttf') format('truetype');
+    }
+  </style>
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
   <title>order_management_systerm</title>
   <link rel="manifest" href="manifest.json">
+  
+  <style>
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      -ms-transform: translate(-50%, -50%);
+      transform: translate(-50%, -50%);
+    }
+    
+    .loading-text {
+      font-family: Arial, sans-serif;
+      font-size: 18px;
+      color: #333;
+      margin-left: 12px;
+    }
+
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-radius: 50%;
+      border-top: 4px solid #3498db;
+      width: 40px;
+      height: 40px;
+      -webkit-animation: spin 1s linear infinite;
+      animation: spin 1s linear infinite;
+    }
+
+    @-webkit-keyframes spin {
+      0% { -webkit-transform: rotate(0deg); }
+      100% { -webkit-transform: rotate(360deg); }
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 
   <script>
     // The value below is injected by flutter build, do not touch.
     var serviceWorkerVersion = null;
+    
+    // 资源加载进度跟踪
+    var resourcesLoaded = 0;
+    var totalResources = 3; // main.dart.js + 2 font files
+    
+    function updateLoadingProgress() {
+      resourcesLoaded++;
+      var progressText = document.querySelector('.loading-text');
+      if (progressText) {
+        progressText.textContent = `Loading application... ${Math.round((resourcesLoaded/totalResources) * 100)}%`;
+      }
+    }
   </script>
-  <!-- This script adds the flutter initialization JS code -->
+  
+  <!-- 使用 modulepreload 预加载 Flutter 初始化脚本 -->
+  <link rel="modulepreload" href="flutter.js">
   <script src="flutter.js" defer></script>
 </head>
 <body>
+  <div class="loading">
+    <div class="loader"></div>
+    <p class="loading-text">Loading application... 0%</p>
+  </div>
+
   <script>
-    window.addEventListener('load', function(ev) {
-      // Download main.dart.js
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
-        },
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
-          });
-        }
+    // 资源加载监控
+    function monitorResourceLoad(url) {
+      return new Promise((resolve, reject) => {
+        var img = new Image();
+        img.onload = () => {
+          updateLoadingProgress();
+          resolve();
+        };
+        img.onerror = () => {
+          updateLoadingProgress();
+          resolve(); // 即使加载失败也继续
+        };
+        img.src = url;
+      });
+    }
+
+    // 预加载主要资源
+    async function preloadResources() {
+      const resources = [
+        'main.dart.js',
+        'assets/MaterialIcons-Regular.otf',
+        'assets/CupertinoIcons.ttf'
+      ];
+      
+      await Promise.all(resources.map(monitorResourceLoad));
+    }
+
+    window.addEventListener('load', function() {
+      preloadResources().then(() => {
+        // 初始化 Flutter
+        _flutter.loader.loadEntrypoint({
+          serviceWorker: {
+            serviceWorkerVersion: serviceWorkerVersion,
+          },
+          onEntrypointLoaded: async function(engineInitializer) {
+            const appRunner = await engineInitializer.initializeEngine({
+              // 使用 HTML renderer 可以减少初始加载时间
+              renderer: 'html',
+              // 设置缓存大小
+              canvasKitBaseUrl: "/canvaskit/",
+              fontFamily: 'MaterialIcons'
+            });
+            await appRunner.runApp();
+            // 加载完成后隐藏加载提示
+            document.querySelector('.loading').style.display = 'none';
+          }
+        });
       });
     });
 

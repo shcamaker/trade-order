@@ -13,13 +13,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Debug Repository Structure
-      run: |
-        pwd
-        ls -la
-        echo "Repository root contents:"
-        find . -maxdepth 2 -type d
-    
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
@@ -36,26 +29,41 @@ jobs:
         flutter pub get
         flutter config --enable-web
     
+    - name: Optimize assets
+      run: |
+        # 安装字体优化工具
+        sudo apt-get update && sudo apt-get install -y fontforge
+        
+        # 优化字体文件（如果存在）
+        if [ -f "build/web/assets/MaterialIcons-Regular.otf" ]; then
+          fontforge -c 'font = fontforge.open("build/web/assets/MaterialIcons-Regular.otf"); font.generate("build/web/assets/MaterialIcons-Regular.woff2", flags=("opentype"))'
+        fi
+        if [ -f "build/web/assets/CupertinoIcons.ttf" ]; then
+          fontforge -c 'font = fontforge.open("build/web/assets/CupertinoIcons.ttf"); font.generate("build/web/assets/CupertinoIcons.woff2", flags=("opentype"))'
+        fi
+    
     - name: Build Web App
       run: |
         flutter build web \
           --release \
           --base-href "/trade-order/" \
           --web-renderer html \
-          --no-tree-shake-icons \
+          --dart-define=Dart2jsOptimization=O4 \
+          --pwa-strategy offline-first \
+          --csp \
+          --dart2js-optimization O4 \
+          --no-source-maps \
           --verbose
     
-    - name: Debug Build Output
+    - name: Optimize build output
       run: |
-        cd build/web
-        echo "=== Build Directory Contents ==="
-        ls -la
-        echo "=== Index HTML Content ==="
-        cat index.html
-        echo "=== JavaScript Files ==="
-        ls -la *.js || true
-        echo "=== Checking Web Resources ==="
-        find . -type f
+        # 压缩 JS 文件
+        find build/web -name "*.js" -exec gzip -k -9 {} \;
+        find build/web -name "*.js" -exec brotli -k -9 {} \;
+        
+        # 压缩字体文件
+        find build/web -name "*.ttf" -o -name "*.otf" -exec gzip -k -9 {} \;
+        find build/web -name "*.ttf" -o -name "*.otf" -exec brotli -k -9 {} \;
     
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
@@ -63,4 +71,8 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./build/web
         force_orphan: true
-        commit_message: "Deploy Flutter web app to GitHub Pages" 
+        commit_message: "Deploy Flutter web app to GitHub Pages"
+        enable_jekyll: false
+        cname: ${{ secrets.CNAME }}
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com' 
