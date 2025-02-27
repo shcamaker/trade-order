@@ -19,6 +19,7 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,19 +27,53 @@
   <meta name="apple-mobile-web-app-title" content="order_management_systerm">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
   
-  <!-- 预加载关键资源 -->
-  <link rel="preload" href="main.dart.js" as="script">
-  <link rel="preload" href="assets/MaterialIcons-Regular.otf" as="font" type="font/otf" crossorigin>
-  <link rel="preload" href="assets/CupertinoIcons.ttf" as="font" type="font/ttf" crossorigin>
-  
+  <!-- 智能预加载 -->
+  <script>
+    // 检测是否为移动设备
+    function isMobileDevice() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+    
+    // 根据设备类型选择要加载的资源
+    const isDesktop = !isMobileDevice();
+    const renderer = isDesktop ? 'canvaskit' : 'html';
+    
+    // 预加载核心资源
+    const preloadLinks = [
+      { href: 'main.dart.js', as: 'script' },
+      { href: 'flutter.js', as: 'script' }
+    ];
+    
+    // 如果是桌面端，预加载 CanvasKit
+    if (isDesktop) {
+      preloadLinks.push({ 
+        href: 'canvaskit/canvaskit.js',
+        as: 'script'
+      });
+      preloadLinks.push({
+        href: 'canvaskit/canvaskit.wasm',
+        as: 'fetch'
+      });
+    }
+    
+    // 动态添加预加载链接
+    preloadLinks.forEach(link => {
+      const preloadLink = document.createElement('link');
+      preloadLink.rel = 'preload';
+      preloadLink.href = link.href;
+      preloadLink.as = link.as;
+      if (link.type) preloadLink.type = link.type;
+      document.head.appendChild(preloadLink);
+    });
+  </script>
+
   <!-- 字体样式优化 -->
   <style>
     @font-face {
       font-family: 'MaterialIcons';
-      src: url('assets/MaterialIcons-Regular.otf') format('opentype');
-      font-weight: normal;
-      font-style: normal;
-      font-display: block;
+      font-display: swap;
+      src: local('MaterialIcons-Regular'),
+           url('assets/MaterialIcons-Regular.otf') format('opentype');
     }
     
     @font-face {
@@ -70,7 +105,7 @@
     }
     
     .loading-text {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       font-size: 18px;
       color: #333;
       margin-left: 12px;
@@ -98,99 +133,52 @@
   </style>
 
   <script>
-    // The value below is injected by flutter build, do not touch.
     var serviceWorkerVersion = null;
     
-    // 资源加载进度跟踪
-    var resourcesLoaded = 0;
-    var totalResources = 3; // main.dart.js + 2 font files
-    
-    function updateLoadingProgress() {
-      resourcesLoaded++;
-      var progressText = document.querySelector('.loading-text');
-      if (progressText) {
-        progressText.textContent = `Loading application... ${Math.round((resourcesLoaded/totalResources) * 100)}%`;
+    window.addEventListener('load', function() {
+      // 初始化 Flutter
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: async function(engineInitializer) {
+          // 根据设备类型选择渲染器
+          const renderer = !isMobileDevice() ? 'canvaskit' : 'html';
+          
+          const appRunner = await engineInitializer.initializeEngine({
+            renderer: renderer,
+            assetBase: '/',
+            // 如果是桌面端，使用 WASM
+            useColorEmoji: true
+          });
+          
+          await appRunner.runApp();
+          document.querySelector('.loading').style.display = 'none';
+        }
+      });
+    });
+
+    // 统一的错误处理
+    window.addEventListener('error', function(event) {
+      // 忽略已知的非关键错误
+      if (event.filename && (
+          event.filename.endsWith('.map') ||
+          event.filename.includes('assets/') ||
+          event.filename.includes('fonts/')
+      )) {
+        event.preventDefault();
+        return;
       }
-    }
+
+      console.warn('Resource load error:', event.filename);
+    }, true);
   </script>
-  
-  <!-- 使用 modulepreload 预加载 Flutter 初始化脚本 -->
-  <link rel="modulepreload" href="flutter.js">
-  <script src="flutter.js" defer></script>
 </head>
 <body>
   <div class="loading">
     <div class="loader"></div>
     <p class="loading-text">Loading application...</p>
   </div>
-
-  <script>
-    // 资源加载监控
-    function monitorResourceLoad(url) {
-      return new Promise((resolve, reject) => {
-        var img = new Image();
-        img.onload = () => {
-          updateLoadingProgress();
-          resolve();
-        };
-        img.onerror = () => {
-          updateLoadingProgress();
-          resolve(); // 即使加载失败也继续
-        };
-        img.src = url;
-      });
-    }
-
-    // 预加载主要资源
-    async function preloadResources() {
-      const resources = [
-        'main.dart.js',
-        'assets/MaterialIcons-Regular.otf',
-        'assets/CupertinoIcons.ttf'
-      ];
-      
-      await Promise.all(resources.map(monitorResourceLoad));
-    }
-
-    window.addEventListener('load', function() {
-      preloadResources().then(() => {
-        // 初始化 Flutter
-        _flutter.loader.loadEntrypoint({
-          serviceWorker: {
-            serviceWorkerVersion: serviceWorkerVersion,
-          },
-          onEntrypointLoaded: async function(engineInitializer) {
-            const appRunner = await engineInitializer.initializeEngine({
-              // 使用 HTML renderer 可以减少初始加载时间
-              renderer: 'html',
-              // 设置缓存大小
-              canvasKitBaseUrl: "/canvaskit/",
-              fontFamily: 'MaterialIcons'
-            });
-            await appRunner.runApp();
-            // 加载完成后隐藏加载提示
-            document.querySelector('.loading').style.display = 'none';
-          }
-        });
-      });
-    });
-
-    // 统一的错误处理
-    window.addEventListener('error', function(event) {
-      // 忽略 source map 相关错误
-      if (event.filename && event.filename.endsWith('.map')) {
-        event.preventDefault();
-        return;
-      }
-      
-      // 忽略字体加载错误
-      if (event.target && (event.target.tagName === 'LINK' || event.target.tagName === 'STYLE')) {
-        event.preventDefault();
-        return;
-      }
-
-      console.warn('Resource load error:', event.filename);
-    });
-  </script>
+  <script src="flutter.js" defer></script>
 </body>
 </html>

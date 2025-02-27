@@ -19,43 +19,64 @@ jobs:
         flutter-version: '3.19.0'
         channel: 'stable'
     
-    - name: Print Flutter and Dart versions
-      run: |
-        flutter --version
-        dart --version
-    
     - name: Install dependencies
       run: |
         flutter pub get
         flutter config --enable-web
+        sudo apt-get update && sudo apt-get install -y gzip brotli
     
-    - name: Build Web App
+    # 构建移动端版本(HTML渲染器)
+    - name: Build Web App (Mobile)
       run: |
         flutter build web \
           --release \
           --base-href "/trade-order/" \
           --web-renderer html \
+          --dart2js-optimization=O4 \
+          --tree-shake-icons \
           --no-source-maps \
           --verbose
-    
-    - name: Copy Flutter Web Assets
+        mv build/web build/web-mobile
+
+    # 构建桌面端版本(CanvasKit渲染器) 
+    - name: Build Web App (Desktop)
       run: |
-        # 确保目标目录存在
-        mkdir -p build/web/assets
+        flutter build web \
+          --release \
+          --base-href "/trade-order/" \
+          --web-renderer canvaskit \
+          --dart2js-optimization=O4 \
+          --tree-shake-icons \
+          --no-source-maps \
+          --verbose
+        mv build/web build/web-desktop
+    
+    - name: Optimize Assets
+      run: |
+        # 优化移动端资源
+        cd build/web-mobile
+        find . -name "*.js" -exec gzip -9 -k {} \;
+        find . -name "*.js" -exec brotli -9 -k {} \;
+        find . -name "*.otf" -exec gzip -9 -k {} \;
+        find . -name "*.otf" -exec brotli -9 -k {} \;
+        find . -name "*.json" -exec gzip -9 -k {} \;
+        find . -name "*.json" -exec brotli -9 -k {} \;
+        cd ../..
         
-        # 复制 MaterialIcons 字体
-        FLUTTER_SDK=$(which flutter | xargs dirname | xargs dirname)
-        cp "$FLUTTER_SDK/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf" build/web/assets/ || true
-        
-        # 显示复制后的文件列表
-        echo "=== Assets Directory Contents ==="
-        ls -la build/web/assets/
+        # 优化桌面端资源
+        cd build/web-desktop
+        find . -name "*.js" -exec gzip -9 -k {} \;
+        find . -name "*.js" -exec brotli -9 -k {} \;
+        find . -name "*.otf" -exec gzip -9 -k {} \;
+        find . -name "*.otf" -exec brotli -9 -k {} \;
+        find . -name "*.json" -exec gzip -9 -k {} \;
+        find . -name "*.json" -exec brotli -9 -k {} \;
     
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./build/web
+        publish_dir: ./build/web-mobile  # 默认部署移动端版本
         force_orphan: true
         commit_message: "Deploy Flutter web app to GitHub Pages"
         enable_jekyll: false
