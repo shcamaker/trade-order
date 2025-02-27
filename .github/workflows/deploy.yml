@@ -29,41 +29,28 @@ jobs:
         flutter pub get
         flutter config --enable-web
     
-    - name: Optimize assets
-      run: |
-        # 安装字体优化工具
-        sudo apt-get update && sudo apt-get install -y fontforge
-        
-        # 优化字体文件（如果存在）
-        if [ -f "build/web/assets/MaterialIcons-Regular.otf" ]; then
-          fontforge -c 'font = fontforge.open("build/web/assets/MaterialIcons-Regular.otf"); font.generate("build/web/assets/MaterialIcons-Regular.woff2", flags=("opentype"))'
-        fi
-        if [ -f "build/web/assets/CupertinoIcons.ttf" ]; then
-          fontforge -c 'font = fontforge.open("build/web/assets/CupertinoIcons.ttf"); font.generate("build/web/assets/CupertinoIcons.woff2", flags=("opentype"))'
-        fi
-    
     - name: Build Web App
       run: |
         flutter build web \
           --release \
           --base-href "/trade-order/" \
           --web-renderer html \
-          --dart-define=Dart2jsOptimization=O4 \
-          --pwa-strategy offline-first \
-          --csp \
-          --dart2js-optimization O4 \
           --no-source-maps \
           --verbose
     
-    - name: Optimize build output
+    - name: Copy Flutter Web Assets
       run: |
-        # 压缩 JS 文件
-        find build/web -name "*.js" -exec gzip -k -9 {} \;
-        find build/web -name "*.js" -exec brotli -k -9 {} \;
+        # 确保目标目录存在
+        mkdir -p build/web/assets
         
-        # 压缩字体文件
-        find build/web -name "*.ttf" -o -name "*.otf" -exec gzip -k -9 {} \;
-        find build/web -name "*.ttf" -o -name "*.otf" -exec brotli -k -9 {} \;
+        # 复制 Flutter SDK 中的字体文件到构建目录
+        FLUTTER_SDK=$(which flutter | xargs dirname | xargs dirname)
+        cp "$FLUTTER_SDK/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf" build/web/assets/
+        cp "$FLUTTER_SDK/bin/cache/artifacts/material_fonts/CupertinoIcons.ttf" build/web/assets/
+        
+        # 显示复制后的文件列表
+        echo "=== Assets Directory Contents ==="
+        ls -la build/web/assets/
     
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
@@ -73,6 +60,5 @@ jobs:
         force_orphan: true
         commit_message: "Deploy Flutter web app to GitHub Pages"
         enable_jekyll: false
-        cname: ${{ secrets.CNAME }}
         user_name: 'github-actions[bot]'
         user_email: 'github-actions[bot]@users.noreply.github.com' 

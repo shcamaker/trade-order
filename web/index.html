@@ -24,6 +24,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="order_management_systerm">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
   
   <!-- 预加载关键资源 -->
   <link rel="preload" href="main.dart.js" as="script">
@@ -34,18 +35,18 @@
   <style>
     @font-face {
       font-family: 'MaterialIcons';
-      font-style: normal;
-      font-weight: 400;
-      font-display: swap;
       src: url('assets/MaterialIcons-Regular.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: block;
     }
     
     @font-face {
       font-family: 'CupertinoIcons';
-      font-style: normal;
-      font-weight: 400;
-      font-display: swap;
       src: url('assets/CupertinoIcons.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: block;
     }
   </style>
 
@@ -120,7 +121,7 @@
 <body>
   <div class="loading">
     <div class="loader"></div>
-    <p class="loading-text">Loading application... 0%</p>
+    <p class="loading-text">Loading application...</p>
   </div>
 
   <script>
@@ -174,12 +175,21 @@
       });
     });
 
-    // 忽略 .map 文件加载错误
+    // 统一的错误处理
     window.addEventListener('error', function(event) {
+      // 忽略 source map 相关错误
       if (event.filename && event.filename.endsWith('.map')) {
         event.preventDefault();
-        console.warn('Ignored .map file loading error');
+        return;
       }
+      
+      // 忽略字体加载错误
+      if (event.target && (event.target.tagName === 'LINK' || event.target.tagName === 'STYLE')) {
+        event.preventDefault();
+        return;
+      }
+
+      console.warn('Resource load error:', event.filename);
     });
   </script>
 </body>
