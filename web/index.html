@@ -33,62 +33,27 @@
   <link rel="manifest" href="manifest.json">
 
   <script>
-    // 全局错误处理和调试
-    window.addEventListener('error', function(event) {
-      console.error('Script load error:', {
-        message: event.message,
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno,
-        error: event.error
+    // The value below is injected by flutter build, do not touch.
+    var serviceWorkerVersion = null;
+  </script>
+  <!-- This script adds the flutter initialization JS code -->
+  <script src="flutter.js" defer></script>
+</head>
+<body>
+  <script>
+    window.addEventListener('load', function(ev) {
+      // Download main.dart.js
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+          });
+        }
       });
     });
-
-    // 动态加载脚本的通用函数
-    function loadScript(src, onLoadCallback, onErrorCallback) {
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = true;
-      script.onload = onLoadCallback;
-      script.onerror = onErrorCallback;
-      document.body.appendChild(script);
-    }
-
-    // 尝试加载引导脚本的函数
-    function tryLoadBootstrapScript() {
-      console.log('尝试加载引导脚本');
-      
-      const scriptCandidates = [
-        'flutter.js',  // 优先尝试 flutter.js
-        'flutter_bootstrap.js'  // 备选方案
-      ];
-
-      function tryNextScript(index) {
-        if (index >= scriptCandidates.length) {
-          console.error('所有引导脚本加载失败');
-          // 可以在这里添加用户友好的错误提示
-          document.body.innerHTML = '<div style="color:red;">应用加载失败，请刷新页面或稍后重试。</div>';
-          return;
-        }
-
-        const scriptSrc = scriptCandidates[index];
-        console.log(`尝试加载 ${scriptSrc}`);
-
-        loadScript(
-          scriptSrc, 
-          () => {
-            console.log(`${scriptSrc} 加载成功`);
-            // 如果需要，可以在这里执行额外的初始化操作
-          },
-          () => {
-            console.warn(`${scriptSrc} 加载失败`);
-            tryNextScript(index + 1);
-          }
-        );
-      }
-
-      tryNextScript(0);
-    }
 
     // 忽略 .map 文件加载错误
     window.addEventListener('error', function(event) {
@@ -97,12 +62,6 @@
         console.warn('Ignored .map file loading error');
       }
     });
-
-    // 页面加载后尝试加载引导脚本
-    window.addEventListener('DOMContentLoaded', tryLoadBootstrapScript);
   </script>
-</head>
-<body>
-  <!-- 移除直接的脚本引用，改为动态加载 -->
 </body>
 </html>
