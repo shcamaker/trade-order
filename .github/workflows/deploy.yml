@@ -43,10 +43,9 @@ jobs:
         # 确保目标目录存在
         mkdir -p build/web/assets
         
-        # 复制 Flutter SDK 中的字体文件到构建目录
+        # 复制 MaterialIcons 字体
         FLUTTER_SDK=$(which flutter | xargs dirname | xargs dirname)
-        cp "$FLUTTER_SDK/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf" build/web/assets/
-        cp "$FLUTTER_SDK/bin/cache/artifacts/material_fonts/CupertinoIcons.ttf" build/web/assets/
+        cp "$FLUTTER_SDK/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf" build/web/assets/ || true
         
         # 显示复制后的文件列表
         echo "=== Assets Directory Contents ==="
