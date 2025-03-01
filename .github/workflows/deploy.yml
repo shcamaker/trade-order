@@ -25,7 +25,7 @@ jobs:
         flutter config --enable-web
         sudo apt-get update && sudo apt-get install -y gzip brotli
     
-    # 只构建HTML渲染器版本，简化部署
+    # 构建优化版本
     - name: Build Web App
       run: |
         # 确保资源目录存在
@@ -38,10 +38,11 @@ jobs:
           --dart2js-optimization=O4 \
           --tree-shake-icons \
           --no-source-maps \
+          --pwa-strategy offline-first \
           --verbose
         
         # 复制必要的资源文件
-        cp -r lib/ShipmentManagement build/web/assets/
+        cp -r lib/ShipmentManagement build/web/assets/ || true
         
         # 确保字体文件存在
         if [ ! -f "build/web/assets/FontManifest.json" ]; then
@@ -50,6 +51,13 @@ jobs:
         
         # 修复base href
         sed -i 's|<base href="/">|<base href="./"|g' build/web/index.html
+        
+        # 优化Service Worker
+        if [ -f "build/web/flutter_service_worker.js" ]; then
+          echo "Optimizing Service Worker..."
+          # 修改Service Worker只缓存核心资源
+          sed -i 's/"core": \[\]/"core": ["main.dart.js", "flutter.js", "index.html", "manifest.json", "favicon.png", "assets\/FontManifest.json"]/g' build/web/flutter_service_worker.js
+        fi
     
     - name: Optimize Assets
       run: |
@@ -63,14 +71,32 @@ jobs:
         find . -name "*.json" -exec gzip -9 -k {} \;
         find . -name "*.json" -exec brotli -9 -k {} \;
         
-        # 压缩字体文件
-        find . -name "*.otf" -exec gzip -9 -k {} \;
-        find . -name "*.ttf" -exec gzip -9 -k {} \;
+        # 压缩HTML文件
+        find . -name "*.html" -exec gzip -9 -k {} \;
+        find . -name "*.html" -exec brotli -9 -k {} \;
         
         # 列出所有资源文件以便调试
         echo "Listing all files in build/web:"
-        find . -type f
+        find . -type f | sort
+        
+        # 检查文件大小
+        echo "File sizes:"
+        du -h main.dart.js
+        du -h flutter.js
+        du -h flutter_service_worker.js
     
+    # 创建离线包
+    - name: Create Offline Package
+      run: |
+        cd build/web
+        zip -r ../../flutter_web_app.zip *
+    
+    - name: Upload Offline Package
+      uses: actions/upload-artifact@v2
+      with:
+        name: flutter_web_app
+        path: flutter_web_app.zip
+        
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:

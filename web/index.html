@@ -21,8 +21,8 @@
   <meta name="description" content="A new Flutter project.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- iOS meta tags & icons -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <!-- 移动设备meta标签 -->
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="order_management_systerm">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
@@ -33,47 +33,39 @@
   
   <!-- 字体样式优化 -->
   <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    
+    /* 内联字体定义，避免额外请求 */
     @font-face {
       font-family: 'MaterialIcons';
       font-style: normal;
       font-weight: 400;
-      font-display: block;
-      src: url(assets/fonts/MaterialIcons-Regular.otf) format('opentype');
+      font-display: swap;
     }
     
-    @font-face {
-      font-family: 'CupertinoIcons';
-      src: url('assets/CupertinoIcons.ttf') format('truetype');
-      font-weight: normal;
-      font-style: normal;
-      font-display: block;
-    }
-  </style>
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
-
-  <title>order_management_systerm</title>
-  <link rel="manifest" href="manifest.json">
-  
-  <style>
     .loading {
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       margin: 0;
       position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
-      transform: translate(-50%, -50%);
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #f5f5f5;
     }
     
     .loading-text {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       font-size: 18px;
       color: #333;
-      margin-left: 12px;
+      margin-top: 16px;
     }
 
     .loader {
@@ -95,73 +87,186 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-  </style>
-
-  <script>
-    // 服务工作线程版本
-    var serviceWorkerVersion = null;
     
-    // 资源加载重试
-    async function loadResource(url, retries = 3) {
-      for (let i = 0; i < retries; i++) {
-        try {
-          const response = await fetch(url);
-          if (response.ok) return response;
-          console.warn(`Failed to load ${url}, attempt ${i + 1} of ${retries}`);
-        } catch (e) {
-          console.warn(`Error loading ${url}:`, e);
-        }
-        // 等待后重试
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      return null;
+    .progress-container {
+      width: 250px;
+      height: 20px;
+      background-color: #e0e0e0;
+      border-radius: 10px;
+      margin-top: 16px;
+      overflow: hidden;
     }
     
-    window.addEventListener('load', async function() {
-      // 预加载关键资源
-      await Promise.all([
-        loadResource('main.dart.js'),
-        loadResource('flutter.js')
-      ]);
-      
-      // 初始化 Flutter
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
-        },
-        onEntrypointLoaded: async function(engineInitializer) {
-          const appRunner = await engineInitializer.initializeEngine({
-            renderer: 'html',
-            assetBase: './'
-          });
-          
-          await appRunner.runApp();
-          document.querySelector('.loading').style.display = 'none';
-        }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background-color: #3498db;
+      transition: width 0.3s ease;
+    }
+  </style>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>order_management_systerm</title>
+  <link rel="manifest" href="manifest.json">
+  
+  <script>
+    // Service Worker 版本
+    var serviceWorkerVersion = null;
+    
+    // 核心资源列表 - 只缓存这些资源
+    const CORE_ASSETS = [
+      'main.dart.js',
+      'flutter.js',
+      'index.html',
+      'manifest.json',
+      'favicon.png',
+      'assets/FontManifest.json'
+    ];
+    
+    // 进度跟踪
+    let loadingProgress = 0;
+    const totalSteps = 3; // 初始化、加载主JS、运行应用
+    
+    function updateProgress(step) {
+      loadingProgress += step;
+      const percent = Math.min(Math.round((loadingProgress / totalSteps) * 100), 100);
+      const progressBar = document.querySelector('.progress-bar');
+      if (progressBar) {
+        progressBar.style.width = `${percent}%`;
+      }
+      const progressText = document.querySelector('.progress-text');
+      if (progressText) {
+        progressText.textContent = `${percent}%`;
+      }
+    }
+    
+    // 延迟注册 Service Worker
+    function registerServiceWorkerLater() {
+      // 应用加载完成后再注册 Service Worker
+      window.addEventListener('flutter-first-frame', function() {
+        // 延迟3秒注册，确保应用已完全加载
+        setTimeout(() => {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('flutter_service_worker.js?v=' + serviceWorkerVersion)
+              .then(function(reg) {
+                console.log('Service worker registered with scope:', reg.scope);
+                
+                // 自定义缓存策略 - 只缓存核心资源
+                if (reg.active) {
+                  navigator.serviceWorker.controller.postMessage({
+                    type: 'CACHE_CORE_ASSETS',
+                    assets: CORE_ASSETS
+                  });
+                }
+              })
+              .catch(function(e) {
+                console.error('Error during service worker registration:', e);
+              });
+          }
+        }, 3000);
       });
+    }
+    
+    // 预加载主要资源
+    function preloadMainScript() {
+      return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'main.dart.js';
+        script.onload = () => {
+          updateProgress(1);
+          resolve();
+        };
+        script.onerror = () => {
+          console.error('Failed to load main.dart.js');
+          resolve(); // 继续尝试运行应用
+        };
+        document.body.appendChild(script);
+      });
+    }
+    
+    // 初始化Flutter
+    async function initFlutter() {
+      try {
+        // 直接加载Flutter
+        window.flutterConfiguration = {
+          canvasKitBaseUrl: "./canvaskit/",
+          renderer: "html"
+        };
+        
+        updateProgress(1);
+        
+        // 等待Flutter初始化
+        await new Promise(resolve => {
+          if (window._flutter) {
+            resolve();
+            return;
+          }
+          
+          window.addEventListener('flutter-first-frame', resolve);
+        });
+        
+        updateProgress(1);
+      } catch (e) {
+        console.error('Error initializing Flutter:', e);
+      }
+    }
+    
+    // 主函数
+    window.addEventListener('DOMContentLoaded', async function() {
+      try {
+        // 加载主脚本
+        await preloadMainScript();
+        
+        // 初始化Flutter
+        await initFlutter();
+        
+        // 延迟注册 Service Worker
+        registerServiceWorkerLater();
+        
+        // 隐藏加载界面
+        setTimeout(() => {
+          const loadingElement = document.querySelector('.loading');
+          if (loadingElement) {
+            loadingElement.style.opacity = '0';
+            loadingElement.style.transition = 'opacity 0.5s ease';
+            setTimeout(() => {
+              loadingElement.style.display = 'none';
+            }, 500);
+          }
+        }, 1000);
+      } catch (e) {
+        console.error('Error during initialization:', e);
+      }
     });
 
-    // 统一的错误处理
+    // 全局错误处理
     window.addEventListener('error', function(event) {
-      // 忽略已知的非关键错误
+      // 忽略非关键错误
       if (event.filename && (
           event.filename.endsWith('.map') ||
           event.filename.includes('canvaskit/') ||
-          event.filename.includes('assets/fonts/')
+          event.message && event.message.includes('service worker')
       )) {
         event.preventDefault();
         return;
       }
-
-      console.warn('Resource load error:', event.filename);
+      
+      console.warn('Resource load error:', event.message);
     }, true);
   </script>
 </head>
 <body>
   <div class="loading">
     <div class="loader"></div>
-    <p class="loading-text">Loading application...</p>
+    <p class="loading-text">Loading application</p>
+    <div class="progress-container">
+      <div class="progress-bar"></div>
+    </div>
+    <p class="progress-text">0%</p>
   </div>
-  <script src="flutter.js" defer></script>
+  
+  <script src="flutter.js"></script>
 </body>
 </html>
