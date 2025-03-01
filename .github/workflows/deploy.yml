@@ -25,58 +25,57 @@ jobs:
         flutter config --enable-web
         sudo apt-get update && sudo apt-get install -y gzip brotli
     
-    # 构建移动端版本(HTML渲染器)
-    - name: Build Web App (Mobile)
+    # 只构建HTML渲染器版本，简化部署
+    - name: Build Web App
       run: |
+        # 确保资源目录存在
+        mkdir -p build/web/assets
+        
+        # 构建web应用
         flutter build web \
           --release \
-          --base-href "/trade-order/" \
           --web-renderer html \
           --dart2js-optimization=O4 \
           --tree-shake-icons \
           --no-source-maps \
           --verbose
-        mv build/web build/web-mobile
-
-    # 构建桌面端版本(CanvasKit渲染器) 
-    - name: Build Web App (Desktop)
-      run: |
-        flutter build web \
-          --release \
-          --base-href "/trade-order/" \
-          --web-renderer canvaskit \
-          --dart2js-optimization=O4 \
-          --tree-shake-icons \
-          --no-source-maps \
-          --verbose
-        mv build/web build/web-desktop
+        
+        # 复制必要的资源文件
+        cp -r lib/ShipmentManagement build/web/assets/
+        
+        # 确保字体文件存在
+        if [ ! -f "build/web/assets/FontManifest.json" ]; then
+          echo '{"fonts":[]}' > build/web/assets/FontManifest.json
+        fi
+        
+        # 修复base href
+        sed -i 's|<base href="/">|<base href="./"|g' build/web/index.html
     
     - name: Optimize Assets
       run: |
-        # 优化移动端资源
-        cd build/web-mobile
-        find . -name "*.js" -exec gzip -9 -k {} \;
-        find . -name "*.js" -exec brotli -9 -k {} \;
-        find . -name "*.otf" -exec gzip -9 -k {} \;
-        find . -name "*.otf" -exec brotli -9 -k {} \;
-        find . -name "*.json" -exec gzip -9 -k {} \;
-        find . -name "*.json" -exec brotli -9 -k {} \;
-        cd ../..
+        cd build/web
         
-        # 优化桌面端资源
-        cd build/web-desktop
+        # 压缩JS文件
         find . -name "*.js" -exec gzip -9 -k {} \;
         find . -name "*.js" -exec brotli -9 -k {} \;
-        find . -name "*.otf" -exec gzip -9 -k {} \;
-        find . -name "*.otf" -exec brotli -9 -k {} \;
+        
+        # 压缩JSON文件
         find . -name "*.json" -exec gzip -9 -k {} \;
         find . -name "*.json" -exec brotli -9 -k {} \;
+        
+        # 压缩字体文件
+        find . -name "*.otf" -exec gzip -9 -k {} \;
+        find . -name "*.ttf" -exec gzip -9 -k {} \;
+        
+        # 列出所有资源文件以便调试
+        echo "Listing all files in build/web:"
+        find . -type f
     
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./build/web-mobile  # 默认部署移动端版本
+        publish_dir: ./build/web
         force_orphan: true
         commit_message: "Deploy Flutter web app to GitHub Pages"
         enable_jekyll: false
