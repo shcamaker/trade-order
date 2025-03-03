@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:io' show Process;
 import '../models/template_model.dart';
 import '../services/api_service.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-
-// Web平台的文件分享模拟
-import 'dart:html' as html;
+import '../services/platform_file_handler.dart';
+import 'package:http/http.dart' as http;
 
 class TemplateDetailPage extends StatefulWidget {
   final TemplateModel template;
@@ -34,48 +34,21 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
   }
 
   Widget _buildPdfPreview() {
-    if (kIsWeb) {
-      // Web平台显示文件路径
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Web平台PDF预览'),
-            Text(_localPdfPath ?? '未找到文件'),
-            ElevatedButton(
-              onPressed: _downloadDocument,
-              child: const Text('下载文件'),
-            )
-          ],
-        ),
-      );
-    } else if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-      // 桌面平台显示文件路径
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('PDF文件位置：'),
-            Text(_localPdfPath ?? '未找到文件'),
-            ElevatedButton(
-              onPressed: _downloadDocument,
-              child: const Text('下载文件'),
-            )
-          ],
-        ),
-      );
-    } else if (Platform.isAndroid || Platform.isIOS) {
-      // 移动平台使用 PDFView
-      return PDFView(
-        filePath: _localPdfPath!,
-        enableSwipe: true,
-        swipeHorizontal: false,
-        autoSpacing: false,
-        pageFling: true,
+    if (_localPdfPath == null) {
+      return const Center(child: Text('无法加载PDF'));
+    }
+    
+    if (_localPdfPath!.startsWith('http')) {
+      // 网络PDF
+      return SfPdfViewer.network(
+        _localPdfPath!,
+        enableDoubleTapZooming: true,
       );
     } else {
-      return const Center(
-        child: Text('当前平台不支持PDF预览'),
+      // 本地PDF
+      return SfPdfViewer.file(
+        File(_localPdfPath!),
+        enableDoubleTapZooming: true,
       );
     }
   }
@@ -99,58 +72,65 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _localPdfPath != null
-              ? _buildPdfPreview()
-              : const Center(child: Text('无法加载PDF')),
+          : _buildPdfPreview(),
     );
   }
 
   Future<void> _downloadDocument() async {
     try {
+      setState(() {
+        _isLoading = true;
+      });
+
       final filePath = await ApiService.generateDocument(
           widget.updatedDetails, widget.template.name, Format.docx.value);
 
+      // 直接在这里处理下载，不再调用_downloadFile
       if (kIsWeb) {
-        // Web平台使用浏览器下载
-        _downloadFileWeb(filePath);
-      } else {
-        // 移动和桌面平台使用 share_plus
-        if (File(filePath).existsSync()) {
-          await Share.shareXFiles(
-            [XFile(filePath)],
-            text: '分享文档：${widget.template.name}',
-          ).catchError((error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('分享失败: $error')),
-            );
-            return const ShareResult('', ShareResultStatus.dismissed);
-          });
+        // Web平台实现
+        final response = await http.get(Uri.parse(filePath));
+        if (response.statusCode == 200) {
+          final fileName = filePath.split('/').last;
+          await downloadFileWeb(response.bodyBytes, fileName);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('文件路径无效')),
+            SnackBar(content: Text('下载失败: ${response.statusCode}')),
           );
+        }
+      } else {
+        // 非Web平台实现
+        if (filePath.startsWith('http')) {
+          final response = await http.get(Uri.parse(filePath));
+          if (response.statusCode == 200) {
+            final fileName = filePath.split('/').last;
+            await downloadFileNative(response.bodyBytes, fileName);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('下载失败: ${response.statusCode}')),
+            );
+          }
+        } else {
+          // 本地文件路径
+          final file = File(filePath);
+          if (await file.exists()) {
+            final fileName = filePath.split('/').last;
+            await downloadFileNative(await file.readAsBytes(), fileName);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('文件未找到: $filePath')),
+            );
+          }
         }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('下载失败: $e')),
       );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
-  }
-
-  // Web平台下载文件的特殊方法
-  void _downloadFileWeb(String filePath) {
-    // 使用 HTML5 的下载功能
-    if (!kIsWeb) return;
-
-    final fileName = filePath.split('/').last;
-    final anchor = html.AnchorElement(href: filePath)
-      ..setAttribute('download', fileName)
-      ..style.display = 'none';
-
-    html.document.body?.children.add(anchor);
-    anchor.click();
-    html.document.body?.children.remove(anchor);
   }
 
   void _previewDocument() async {

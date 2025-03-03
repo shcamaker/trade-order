@@ -38,14 +38,18 @@ class EditableInfo {
 class TemplateModel {
   final String id;
   final String name;
+  final String description;
   final Color backgroundColor;
   final List<EditableInfo>? editableInfos;
+  final TemplateType type;
 
   TemplateModel({
     required this.id,
     required this.name,
+    required this.description,
     required this.backgroundColor,
     this.editableInfos,
+    required this.type,
   });
 
   factory TemplateModel.fromJson(Map<String, dynamic> json) {
@@ -58,10 +62,15 @@ class TemplateModel {
     return TemplateModel(
       id: json['id'].toString(),
       name: json['name'],
+      description: json['description'],
       backgroundColor: parseColor(json['backgroundColor']),
       editableInfos: (json['editableInfos'] as List?)
           ?.map((e) => EditableInfo.fromJson(e))
           .toList(),
+      type: TemplateType.values.firstWhere(
+        (t) => t.value == json['type'],
+        orElse: () => TemplateType.export,
+      )
     );
   }
 }
@@ -72,4 +81,13 @@ enum Format {
 
   final String value;
   const Format(this.value);
+}
+
+enum TemplateType {
+  export('出口单据'),
+  import('进口单据'),
+  other('其他');
+
+  final String value;
+  const TemplateType(this.value);
 }

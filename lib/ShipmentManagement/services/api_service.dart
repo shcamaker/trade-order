@@ -3,10 +3,15 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
-import '../../config.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../config.dart';  // Import the Config class
 
-// 仅在 Web 平台导入
-import 'dart:html' as html;
+// 使用条件导入
+import 'dart:async';
+import 'dart:io' as io;
+
+// 仅在Web平台导入dart:html
+import 'platform_file_handler.dart';
 
 class ApiService {
   static String get baseUrl => Config.baseUrl;
@@ -35,7 +40,7 @@ class ApiService {
         if (kIsWeb) {
           // 在Web平台，我们无法直接保存文件到本地文件系统
           // 可以考虑使用 web 特定的下载方法
-          _downloadFileWeb(response.bodyBytes, '$filename.$format');
+          await downloadFile(response.bodyBytes, '$filename.$format');
           return '$filename.$format';
         }
 
@@ -60,22 +65,20 @@ class ApiService {
     }
   }
 
-  // Web平台下载文件的特殊方法
-  static void _downloadFileWeb(List<int> bytes, String filename) {
-    // 使用 HTML5 的下载功能
-    // 注意：这段代码只能在Web平台运行
-    if (!kIsWeb) return;
-
-    final blob = html.Blob([bytes]);
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement()
-      ..href = url
-      ..style.display = 'none'
-      ..download = filename;
-
-    html.document.body?.children.add(anchor);
-    anchor.click();
-    html.document.body?.children.remove(anchor);
-    html.Url.revokeObjectUrl(url);
+  // 修改下载文件方法，使用平台特定实现
+  static Future<void> downloadFile(List<int> bytes, String fileName) async {
+    try {
+      if (kIsWeb) {
+        // Web平台实现
+        await downloadFileWeb(bytes, fileName);
+      } else {
+        // 移动端和桌面端实现
+        await downloadFileNative(bytes, fileName);
+      }
+    } catch (e) {
+      print('Error downloading file: $e');
+      rethrow;
+    }
   }
+
 }

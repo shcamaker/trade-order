@@ -1,18 +1,7 @@
-# order_management_systerm
+# 订单管理系统 (Trade Order)
 
-A new Flutter project.
+基于 Flutter Web 的订单管理系统，通过 GitHub Actions 自动部署到 GitHub Pages。
 
-## Getting Started
+## 项目概述
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-# trade-order
-订单管理系统
+这是一个使用 Flutter 开发的跨平台订单管理系统，支持通过 Web/APP/桌面 等多种方式访问。项目采用了多种优化策略，确保在各种设备上都能获得良好的加载性能和用户体验。
