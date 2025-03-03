@@ -27,6 +27,8 @@ jobs:
     
     # 构建优化版本
     - name: Build Web App
+      env:
+        FLUTTER_WEB_RENDERER: html
       run: |
         # 确保资源目录存在
         mkdir -p build/web/assets
@@ -34,7 +36,6 @@ jobs:
         # 构建web应用
         flutter build web \
           --release \
-          --web-renderer html \
           --dart2js-optimization=O4 \
           --tree-shake-icons \
           --no-source-maps \
