@@ -1,13 +1,11 @@
-import 'dart:ffi';
-
+import 'dart:async';
+import 'dart:html' as html;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 import '../../config.dart';  // Import the Config class
-// 导入平台特定的实现
-import 'platform_file_handler_web.dart' if (dart.library.io) 'platform_file_handler_native.dart' as impl;
 
 // 使用条件导入
 import 'dart:async';
@@ -39,7 +37,7 @@ class ApiService {
         if (kIsWeb) {
           // 在Web平台，我们无法直接保存文件到本地文件系统
           // 可以考虑使用 web 特定的下载方法
-          await impl.downloadFileWeb(response.bodyBytes, '$filename.$format');
+          await downloadFileWeb(response.bodyBytes, '$filename.$format');
           
           return '$filename.$format';
         }
@@ -63,6 +61,15 @@ class ApiService {
       print('Error generating document: $e');
       rethrow;
     }
+  }
+
+  static Future<void> downloadFileWeb(List<int> bytes, String fileName) async {
+    final blob = html.Blob([bytes]);
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute('download', fileName)
+      ..click();
+    html.Url.revokeObjectUrl(url);
   }
 
 }
