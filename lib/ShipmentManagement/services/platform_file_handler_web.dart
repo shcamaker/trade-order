@@ -1,7 +1,6 @@
 // 此文件只在Web平台编译时使用
 import 'dart:async';
 import 'dart:html' as html;
-import 'package:flutter/foundation.dart';
 
 Future<void> downloadFileWeb(List<int> bytes, String fileName) async {
   final blob = html.Blob([bytes]);
@@ -11,7 +10,3 @@ Future<void> downloadFileWeb(List<int> bytes, String fileName) async {
     ..click();
   html.Url.revokeObjectUrl(url);
 }
-
-Future<void> downloadFileNative(List<int> bytes, String fileName) async {
-  throw UnsupportedError('Native download is not supported on web platform.');
-} 

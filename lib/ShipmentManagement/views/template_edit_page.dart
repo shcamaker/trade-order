@@ -409,17 +409,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                 letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(width: 8),
-            // 添加帮助提示图标
-            if (info.hintText.isNotEmpty)
-              Tooltip(
-                message: info.hintText,
-                child: const Icon(
-                  Icons.help_outline_rounded,
-                  size: 16,
-                  color: primaryColor,
-                ),
-              ),
+            const SizedBox(width: 8)
           ],
         ),
         const SizedBox(height: 12),
