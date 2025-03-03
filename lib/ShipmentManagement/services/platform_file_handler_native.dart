@@ -4,6 +4,17 @@ import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
+
+Future<void> downloadFileWeb(List<int> bytes, String fileName) async {
+  throw UnsupportedError('Web download is not supported on native platform.');
+}
+
+Future<void> downloadFileNative(List<int> bytes, String fileName) async {
+  final directory = await getApplicationDocumentsDirectory();
+  final file = File('${directory.path}/$fileName');
+  await file.writeAsBytes(bytes);
+}
 
 Future<void> downloadFileWebImpl(List<int> bytes, String fileName) async {
   // 在非Web平台上，这个函数不会被调用，但需要提供实现
