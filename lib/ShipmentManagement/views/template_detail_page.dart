@@ -146,7 +146,7 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
-                  Text('正在处理文件...'),
+                  Text('正在生成文件...'),
                 ],
               ),
             ),
@@ -252,7 +252,7 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
       final pdfPath = await ApiService.generateDocument(
           widget.updatedDetails, widget.template.name, Format.pdf.value, true);
 
-      if (kIsWeb || File(pdfPath).existsSync()) {
+      if (File(pdfPath).existsSync()) {
         setState(() {
           _localPdfPath = pdfPath;
           _isLoading = false;
@@ -293,7 +293,7 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(8),
-            color: Colors.yellow.shade100,
+            color: Color(0xFF4CAF50).withOpacity(0.05),
             child: const Text(
               '以下为预览效果，标有颜色的为修改的部分',
               textAlign: TextAlign.center,
@@ -305,11 +305,22 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? _buildPreviewLoadingView()
                 : _buildPdfPreview(),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPreviewLoadingView() {
+    return const Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        CircularProgressIndicator(),
+        SizedBox(height: 16),
+        Text('正在生成结果预览...'),
+      ],
     );
   }
 }

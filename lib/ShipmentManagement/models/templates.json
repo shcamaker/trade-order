@@ -113,7 +113,7 @@
           "hintText": "请选择币别",
           "isSelectable": true,
           "supportDefault": true,
-          "options": ["美元", "人民币", "欧元"],
+          "options": ["USD", "RMB", "EUR"],
           "isEditable": true,
           "isNumericField": false
         },
@@ -322,7 +322,7 @@
           "hintText": "请选择币别",
           "isSelectable": true,
           "supportDefault": true,
-          "options": ["美元", "人民币", "欧元"],
+          "options": ["USD", "RMB", "EUR"],
           "isEditable": true,
           "isNumericField": false
         },

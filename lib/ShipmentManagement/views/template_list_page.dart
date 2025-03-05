@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/template_model.dart';
 import './template_edit_page.dart';
+import '../services/api_service.dart';
+import 'dart:io';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class TemplateListPage extends StatefulWidget {
   const TemplateListPage({super.key});
@@ -17,6 +20,10 @@ class _TemplateListPageState extends State<TemplateListPage> {
   bool isLoading = true;
   String _selectedFunction = '单据模板'; // 添加状态变量跟踪当前选中的功能
   String _selectedCategory = '全部'; // 添加状态变量跟踪当前选中的分类
+  String? _localPdfPath; // 添加PDF路径变量
+  bool _isLoading = false; // 添加PDF加载状态变量
+  final ValueNotifier<bool> _isLoadingNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<String?> _pdfPathNotifier = ValueNotifier<String?>(null);
 
   @override
   void initState() {
@@ -371,7 +378,7 @@ class _TemplateListPageState extends State<TemplateListPage> {
                   ? _buildEmptyState(primaryColor, textColor)
                   : GridView.builder(
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 4, // 每行显示4个卡片
+                        crossAxisCount: 5, // 每行显示4个卡片
                         crossAxisSpacing: 24,
                         mainAxisSpacing: 24,
                         childAspectRatio: 1.0, // 调整卡片比例为正方形
@@ -423,73 +430,317 @@ class _TemplateListPageState extends State<TemplateListPage> {
   }
 
   Widget _buildTemplateCard(BuildContext context, TemplateModel template, Color primaryColor, Color textColor) {
-    // 为每个模板分配一个图标
     IconData templateIcon = _getTemplateIcon(template.type.value);
     
-    return Card(
-      elevation: 0, // 移除阴影
-      color: Colors.transparent, // 设置卡片背景为透明
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200, width: 1), // 添加边框
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            offset: const Offset(0, 4),
+            blurRadius: 16,
+            spreadRadius: 2,
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => TemplateEditPage(template: template),
+      child: Card(
+        elevation: 0,
+        color: Colors.white,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TemplateEditPage(template: template),
+              ),
+            );
+          },
+          hoverColor: Colors.grey.withAlpha(10),
+          child: Container(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // 模板图标
+                Icon(
+                  templateIcon,
+                  size: 48,
+                  color: primaryColor,
+                ),
+                const SizedBox(height: 16),
+                // 模板名称
+                Text(
+                  template.name,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                // 模板描述
+                Text(
+                  template.description,
+                  style: TextStyle(
+                    color: textColor.withAlpha(70),
+                    fontSize: 12,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 16),
+                // 添加预览按钮
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    // 先显示对话框
+                    _showPreviewDialog(context, template, primaryColor, textColor);
+                    // 然后开始加载PDF
+                    await _previewDocument(template);
+                  },
+                  icon: const Icon(Icons.visibility, size: 16),
+                  label: const Text('预览'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor.withAlpha(30),
+                    foregroundColor: primaryColor,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          );
-        },
-        // 添加鼠标悬停效果
-        hoverColor: Colors.grey.withAlpha(10),
-        child: Container(
-          color: Colors.white, // 内容区域保持白色背景
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // 模板图标
-              Icon(
-                templateIcon,
-                size: 48,
-                color: primaryColor,
-              ),
-              const SizedBox(height: 16),
-              // 模板名称
-              Text(
-                template.name,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-              // 模板描述
-              Text(
-                template.description,
-                style: TextStyle(
-                  color: textColor.withAlpha(70),
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
           ),
         ),
       ),
     );
   }
   
+  // 修改预览对话框方法
+  void _showPreviewDialog(BuildContext context, TemplateModel template, Color primaryColor, Color textColor) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.6),
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder( // 使用StatefulBuilder使对话框内部可以使用setState
+          builder: (context, setState) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.7,
+                height: MediaQuery.of(context).size.height * 0.8,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 对话框标题栏
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              _getTemplateIcon(template.type.value),
+                              color: primaryColor,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '${template.name} 预览',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
+                          tooltip: '关闭',
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    // 模板信息
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          _buildInfoChip(Icons.description, template.description, primaryColor),
+                        ],
+                      ),
+                    ),
+                    // 预览内容
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: ValueListenableBuilder<bool>(
+                          valueListenable: _isLoadingNotifier,
+                          builder: (context, isLoading, child) {
+                            return ValueListenableBuilder<String?>(
+                              valueListenable: _pdfPathNotifier,
+                              builder: (context, pdfPath, child) {
+                                if (isLoading) {
+                                  return const Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        CircularProgressIndicator(),
+                                        SizedBox(height: 16),
+                                        Text('正在生成模版预览...'),
+                                      ],
+                                    ),
+                                  );
+                                }
+                                
+                                if (pdfPath == null) {
+                                  return const Center(child: Text('无法加载PDF'));
+                                }
+                                
+                                return SfPdfViewer.file(
+                                  File(pdfPath),
+                                  enableDoubleTapZooming: true,
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // 底部按钮
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: textColor,
+                            side: BorderSide(color: Colors.grey.shade300),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          child: const Text('关闭'),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TemplateEditPage(template: template),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          child: const Text('编辑模板'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // 修改预览文档方法
+  Future<void> _previewDocument(TemplateModel template) async {
+    try {
+      _isLoadingNotifier.value = true;
+
+      final Map<String, String> details = Map.fromEntries(
+        template.editableInfos?.map((info) => MapEntry(
+              info.key,
+              '',
+            )) ??
+            [],
+      );
+      
+      final pdfPath = await ApiService.generateDocument(
+          details, template.name, Format.pdf.value, true);
+
+      if (File(pdfPath).existsSync()) {
+        _pdfPathNotifier.value = pdfPath;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('无法加载PDF')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('文档生成失败: $e')),
+        );
+      }
+    } finally {
+      _isLoadingNotifier.value = false;
+    }
+  }
+  
+  // 构建信息标签
+  Widget _buildInfoChip(IconData icon, String label, Color primaryColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: primaryColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: primaryColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // 根据模板类型获取图标
   IconData _getTemplateIcon(String type) {
     switch (type) {
@@ -518,7 +769,7 @@ class _TemplateListPageState extends State<TemplateListPage> {
             ),
             const SizedBox(height: 24),
             Text(
-              '功能开发中',
+              '功能待定',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -527,7 +778,7 @@ class _TemplateListPageState extends State<TemplateListPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '该功能正在开发中，敬请期待！',
+              '该功能模块待定',
               style: TextStyle(
                 fontSize: 16,
                 color: textColor.withAlpha(70),
@@ -554,6 +805,13 @@ class _TemplateListPageState extends State<TemplateListPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _isLoadingNotifier.dispose();
+    _pdfPathNotifier.dispose();
+    super.dispose();
   }
 }
 
