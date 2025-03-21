@@ -34,7 +34,7 @@
           "isSelectable": true,
           "supportDefault": true,
           "isEditable": true,
-          "options": ["中国外运", "中储股份", "中远海运"],
+          "options": ["TIANJIN TAICHY FOOD TRADING CO., LTD", "TIANJIN TAICHY SUPPLY CHAIN MANAGEMENT CO.,LTD"],
           "isNumericField": false
         },
         {
@@ -243,7 +243,7 @@
           "isSelectable": true,
           "supportDefault": true,
           "isEditable": true,
-          "options": ["中国外运", "中储股份", "中远海运"],
+          "options": ["TIANJIN TAICHY FOOD TRADING CO., LTD", "TIANJIN TAICHY SUPPLY CHAIN MANAGEMENT CO.,LTD"],
           "isNumericField": false
         },
         {

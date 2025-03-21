@@ -9,7 +9,7 @@ class Config {
   // API 基础URL
   static String get baseUrl {
     if (isProduction) {
-      return 'https://order-server-apis.vercel.app'; // Vercel 部署的 API 地址
+      return 'http://8.138.99.79'; // 阿里云部署的API地址
     }
     return 'http://localhost:8000';
   }

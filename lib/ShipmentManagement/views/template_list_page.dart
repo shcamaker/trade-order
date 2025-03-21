@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/template_model.dart';
 import './template_edit_page.dart';
+import './pdf_viewer_page.dart';
 import '../services/api_service.dart';
-import 'dart:io';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class TemplateListPage extends StatefulWidget {
@@ -20,8 +20,6 @@ class _TemplateListPageState extends State<TemplateListPage> {
   bool isLoading = true;
   String _selectedFunction = '单据模板'; // 添加状态变量跟踪当前选中的功能
   String _selectedCategory = '全部'; // 添加状态变量跟踪当前选中的分类
-  String? _localPdfPath; // 添加PDF路径变量
-  bool _isLoading = false; // 添加PDF加载状态变量
   final ValueNotifier<bool> _isLoadingNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<String?> _pdfPathNotifier = ValueNotifier<String?>(null);
 
@@ -99,64 +97,79 @@ class _TemplateListPageState extends State<TemplateListPage> {
           children: [
             // 主要内容行
             Expanded(
-              child: Row(
-                children: [
-                  // 左侧标题
-                  const SizedBox(width: 16),
-                  Row(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // 检测宽度，决定是否显示完整菜单或紧凑版本
+                  final bool isNarrow = constraints.maxWidth < 800;
+                  
+                  return Row(
                     children: [
-                      Text(
-                        'TRADE-ASSISTANT',
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
+                      // 左侧标题
+                      const SizedBox(width: 16),
+                      Row(
+                        children: [
+                          Text(
+                            'TRADE-ASSISTANT',
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: isNarrow ? 16 : 20,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      // 中间空间用于居中导航菜单
+                      Expanded(
+                        child: Center(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildNavItem('单据模板', _selectedFunction == '单据模板', primaryColor, textColor),
+                                _buildNavItem('客户管理', _selectedFunction == '客户管理', primaryColor, textColor),
+                                _buildNavItem('订单管理', _selectedFunction == '订单管理', primaryColor, textColor),
+                                _buildNavItem('统计分析', _selectedFunction == '统计分析', primaryColor, textColor),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: primaryColor,
-                          shape: BoxShape.circle,
-                        ),
+                      
+                      // 右侧操作按钮 - 在窄屏幕上减少显示的按钮
+                      if (!isNarrow) IconButton(
+                        icon: Icon(Icons.search, color: textColor),
+                        onPressed: () {},
+                        tooltip: '搜索',
                       ),
+                      // 在非常窄的屏幕上只显示一个用户图标
+                      IconButton(
+                        icon: Icon(Icons.notifications_none, color: textColor),
+                        onPressed: () {},
+                        tooltip: '通知',
+                        iconSize: isNarrow ? 20 : 24,
+                        padding: isNarrow ? EdgeInsets.zero : const EdgeInsets.all(8),
+                      ),
+                      const SizedBox(width: 8),
+                      const CircleAvatar(
+                        radius: 16,
+                        backgroundColor: Color(0xFFEEEEEE),
+                        child: Icon(Icons.person, color: Color(0xFF666666), size: 20),
+                      ),
+                      const SizedBox(width: 16),
                     ],
-                  ),
-                  
-                  // 中间空间用于居中导航菜单
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildNavItem('单据模板', _selectedFunction == '单据模板', primaryColor, textColor),
-                        _buildNavItem('客户管理', _selectedFunction == '客户管理', primaryColor, textColor),
-                        _buildNavItem('订单管理', _selectedFunction == '订单管理', primaryColor, textColor),
-                        _buildNavItem('统计分析', _selectedFunction == '统计分析', primaryColor, textColor),
-                      ],
-                    ),
-                  ),
-                  
-                  // 右侧操作按钮
-                  IconButton(
-                    icon: Icon(Icons.search, color: textColor),
-                    onPressed: () {},
-                    tooltip: '搜索',
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.notifications_none, color: textColor),
-                    onPressed: () {},
-                    tooltip: '通知',
-                  ),
-                  const SizedBox(width: 8),
-                  const CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Color(0xFFEEEEEE),
-                    child: Icon(Icons.person, color: Color(0xFF666666), size: 20),
-                  ),
-                  const SizedBox(width: 16),
-                ],
+                  );
+                }
               ),
             ),
             // 分隔线
@@ -178,8 +191,6 @@ class _TemplateListPageState extends State<TemplateListPage> {
     return InkWell(
       onTap: () {
         setState(() {
-          
-          
           _selectedFunction = label;
         });
         
@@ -195,27 +206,16 @@ class _TemplateListPageState extends State<TemplateListPage> {
                 onPressed: () {
                   setState(() {
                     _selectedFunction = '单据模板';
-                    
                   });
                 },
               ),
             ),
           );
-          
-          // 2秒后自动切回"单据模板"
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) {
-              setState(() {
-                _selectedFunction = '单据模板';
-                
-              });
-            }
-          });
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
@@ -229,7 +229,7 @@ class _TemplateListPageState extends State<TemplateListPage> {
           style: TextStyle(
             color: isSelected ? primaryColor : textColor,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 14, // 稍微减小字体以适应空间
+            fontSize: 14,
           ),
         ),
       ),
@@ -237,108 +237,156 @@ class _TemplateListPageState extends State<TemplateListPage> {
   }
 
   Widget _buildBody(BuildContext context, Color primaryColor, Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 只在选择"单据模板"时显示页面标题、描述和分类标签
-          if (_selectedFunction == '单据模板') ...[
-            // 页面标题和描述
-            _buildPageHeader(primaryColor, textColor),
-            
-            const SizedBox(height: 24),
-            
-            // 模板分类标签
-            _buildCategoryTabs(primaryColor),
-            
-            const SizedBox(height: 24),
-          ],
-          
-          // 根据选中的功能显示不同内容
-          _selectedFunction == '单据模板' 
-              ? _buildTemplatesContent(context, primaryColor, textColor)
-              : _buildComingSoonContent(context, primaryColor, textColor),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 根据屏幕宽度调整内边距
+        double horizontalPadding = constraints.maxWidth < 600 ? 12.0 : 24.0;
+        
+        return SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(horizontalPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 只在选择"单据模板"时显示页面标题、描述和分类标签
+                if (_selectedFunction == '单据模板') ...[
+                  // 页面标题和描述
+                  _buildPageHeader(primaryColor, textColor),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // 模板分类标签
+                  _buildCategoryTabs(primaryColor),
+                  
+                  const SizedBox(height: 16),
+                ],
+                
+                // 根据选中的功能显示不同内容
+                SizedBox(
+                  height: MediaQuery.of(context).size.height - 240, // 设置固定高度
+                  child: _selectedFunction == '单据模板' 
+                      ? _buildTemplatesContent(context, primaryColor, textColor)
+                      : _buildComingSoonContent(context, primaryColor, textColor),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
     );
   }
   
   // 构建页面标题和描述
   Widget _buildPageHeader(Color primaryColor, Color textColor) {
-    return SizedBox(
-      width: double.infinity, // 确保容器占满宽度
-      child: Column(
-        children: [
-          Center(
-            child: Text(
-              '单据模板',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: textColor,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 根据屏幕宽度调整字体大小
+        double titleSize = constraints.maxWidth < 600 ? 20 : 24;
+        double descSize = constraints.maxWidth < 600 ? 12 : 14;
+        
+        return SizedBox(
+          width: double.infinity,
+          child: Column(
+            children: [
+              Center(
+                child: Text(
+                  '单据模板',
+                  style: TextStyle(
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              '选择并编辑适合您业务需求的单据模板',
-              style: TextStyle(
-                fontSize: 16,
-                color: textColor.withOpacity(0.7),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  '选择并编辑适合您业务需求的单据模板',
+                  style: TextStyle(
+                    fontSize: descSize,
+                    color: textColor.withOpacity(0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      }
     );
   }
   
   // 构建分类标签
   Widget _buildCategoryTabs(Color primaryColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40.0), // 与卡片区域保持相同的水平内边距
-      child: Container(
-        width: double.infinity, // 确保容器占满宽度
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(5),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double horizontalPadding = constraints.maxWidth < 600 ? 8.0 : 40.0;
+        
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+          child: Container(
+            width: double.infinity,
+            height: 72,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(5),
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildCategoryChip('全部', _selectedCategory == '全部', primaryColor),
-              const SizedBox(width: 16),
-              _buildCategoryChip('出口单据', _selectedCategory == '出口单据', primaryColor),
-              const SizedBox(width: 16),
-              _buildCategoryChip('进口单据', _selectedCategory == '进口单据', primaryColor),
-              const SizedBox(width: 16),
-              _buildCategoryChip('其他', _selectedCategory == '其他', primaryColor),
-            ],
+            child: Center(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min, // 设置为最小尺寸
+                    children: [
+                      _buildCategoryChip('全部', _selectedCategory == '全部', primaryColor),
+                      const SizedBox(width: 12),
+                      _buildCategoryChip('出口单据', _selectedCategory == '出口单据', primaryColor),
+                      const SizedBox(width: 12),
+                      _buildCategoryChip('随车单据', _selectedCategory == '随车单据', primaryColor),
+                      const SizedBox(width: 12),
+                      _buildCategoryChip('报关单据', _selectedCategory == '报关单据', primaryColor),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      }
     );
   }
 
   // 创建分类标签
   Widget _buildCategoryChip(String label, bool isSelected, Color primaryColor) {
     return Container(
-      margin: const EdgeInsets.only(right: 4),
+      width: 100, // 设置固定宽度
+      margin: const EdgeInsets.symmetric(horizontal: 2),
       child: FilterChip(
-        label: Text(label),
+        label: Container(
+          width: 100, // 文本容器宽度
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? primaryColor : Colors.black87,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              fontSize: 14,
+              height: 1.3,
+            ),
+            textAlign: TextAlign.center, // 文本居中对齐
+            maxLines: 1,
+            overflow: TextOverflow.visible, // 确保文本完全显示
+          ),
+        ),
         selected: isSelected,
         selectedColor: primaryColor.withAlpha(20),
         checkmarkColor: primaryColor,
@@ -350,16 +398,14 @@ class _TemplateListPageState extends State<TemplateListPage> {
             width: 1,
           ),
         ),
-        labelStyle: TextStyle(
-          color: isSelected ? primaryColor : Colors.black87,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        ),
         onSelected: (bool selected) {
           if (selected) {
             _filterTemplatesByCategory(label);
           }
         },
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // 增加内部填充
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
       ),
     );
   }
@@ -373,27 +419,45 @@ class _TemplateListPageState extends State<TemplateListPage> {
           // 模板网格
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40.0), // 增加模板区域两侧间距
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: filteredTemplates.isEmpty
                   ? _buildEmptyState(primaryColor, textColor)
-                  : GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 5, // 每行显示4个卡片
-                        crossAxisSpacing: 24,
-                        mainAxisSpacing: 24,
-                        childAspectRatio: 1.0, // 调整卡片比例为正方形
-                      ),
-                      itemCount: filteredTemplates.length,
-                      itemBuilder: (context, index) {
-                        final template = filteredTemplates[index];
-                        return _buildTemplateCard(context, template, primaryColor, textColor);
-                      },
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        // 根据可用宽度动态计算每行显示的卡片数量
+                        int crossAxisCount = _calculateGridColumns(constraints.maxWidth);
+                        // 更改宽高比让卡片更小
+                        double childAspectRatio = constraints.maxWidth < 600 ? 1.1 : 1.2;
+                        
+                        return GridView.builder(
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                            childAspectRatio: childAspectRatio, // 增加宽高比使卡片更"扁"
+                          ),
+                          itemCount: filteredTemplates.length,
+                          itemBuilder: (context, index) {
+                            final template = filteredTemplates[index];
+                            return _buildTemplateCard(context, template, primaryColor, textColor);
+                          },
+                        );
+                      }
                     ),
             ),
           ),
         ],
       ),
     );
+  }
+  
+  // 根据屏幕宽度计算网格列数 - 增加小屏幕下的列数
+  int _calculateGridColumns(double width) {
+    if (width < 500) return 1;
+    if (width < 800) return 2;
+    if (width < 1100) return 3;
+    if (width < 1400) return 4;
+    return 5;
   }
   
   // 构建空状态提示
@@ -432,109 +496,107 @@ class _TemplateListPageState extends State<TemplateListPage> {
   Widget _buildTemplateCard(BuildContext context, TemplateModel template, Color primaryColor, Color textColor) {
     IconData templateIcon = _getTemplateIcon(template.type.value);
     
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            offset: const Offset(0, 2),
-            blurRadius: 8,
-            spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            offset: const Offset(0, 4),
-            blurRadius: 16,
-            spreadRadius: 2,
-          ),
-        ],
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero, // 移除Card默认的margin
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(6),
+        side: BorderSide(color: Colors.grey.shade200, width: 1),
       ),
-      child: Card(
-        elevation: 0,
-        color: Colors.white,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.grey.shade200, width: 1),
-        ),
-        child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TemplateEditPage(template: template),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TemplateEditPage(template: template),
+            ),
+          );
+        },
+        hoverColor: Colors.grey.withAlpha(10),
+        child: Padding(
+          padding: const EdgeInsets.all(6.0), // 减小内边距
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // 模板图标
+              Icon(
+                templateIcon,
+                size: 40, // 进一步减小图标
+                color: primaryColor,
               ),
-            );
-          },
-          hoverColor: Colors.grey.withAlpha(10),
-          child: Container(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // 模板图标
-                Icon(
-                  templateIcon,
-                  size: 48,
-                  color: primaryColor,
+              const SizedBox(height: 10), // 减小间距
+              // 模板名称
+              Text(
+                template.name,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 18, // 减小字体
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 16),
-                // 模板名称
-                Text(
-                  template.name,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                // 模板描述
-                Text(
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6), // 极小的间距
+              // 模板描述
+              Flexible(
+                child: Text(
                   template.description,
                   style: TextStyle(
                     color: textColor.withAlpha(70),
-                    fontSize: 12,
+                    fontSize: 14, // 更小的字体
+                    height: 1.1, // 减小行高
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 16),
-                // 添加预览按钮
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    // 先显示对话框
-                    _showPreviewDialog(context, template, primaryColor, textColor);
-                    // 然后开始加载PDF
-                    await _previewDocument(template);
-                  },
-                  icon: const Icon(Icons.visibility, size: 16),
-                  label: const Text('预览'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor.withAlpha(30),
-                    foregroundColor: primaryColor,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
+              ),
+              const SizedBox(height: 20), // 减小间距
+              // 添加预览按钮
+              ElevatedButton.icon(
+                onPressed: () async {
+                  _showPreviewDialog(context, template, primaryColor, textColor);
+                  await _previewDocument(template);
+                },
+                icon: const Icon(Icons.visibility, size: 14), // 减小图标大小
+                label: const Text('预览模版', style: TextStyle(fontSize: 14)), // 减小字体大小
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor.withAlpha(30),
+                  foregroundColor: primaryColor,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 减小按钮内边距
+                  minimumSize: const Size(150, 40), // 减小按钮最小尺寸
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-  
-  // 修改预览对话框方法
+
+  // 添加打开PDF全屏预览页面的方法
+  void _openPdfViewerPage(BuildContext context, String url, String title) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PdfViewerPage(
+          pdfUrl: url,
+          title: title,
+        ),
+      ),
+    );
+  }
+
+  // 修改预览对话框方法，添加在浏览器中打开的按钮
   void _showPreviewDialog(BuildContext context, TemplateModel template, Color primaryColor, Color textColor) {
     showDialog(
       context: context,
@@ -627,8 +689,9 @@ class _TemplateListPageState extends State<TemplateListPage> {
                                   return const Center(child: Text('无法加载PDF'));
                                 }
                                 
-                                return SfPdfViewer.file(
-                                  File(pdfPath),
+                                // 使用 SfPdfViewer.network 显示 PDF
+                                return SfPdfViewer.network(
+                                  pdfPath,
                                   enableDoubleTapZooming: true,
                                 );
                               },
@@ -642,14 +705,22 @@ class _TemplateListPageState extends State<TemplateListPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
+                        // 添加全屏预览按钮
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            _openPdfViewerPage(
+                              context, 
+                              _pdfPathNotifier.value!, 
+                              '${template.name} 文档预览'
+                            );
+                          },
+                          icon: const Icon(Icons.fullscreen, size: 16),
+                          label: const Text('全屏预览'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: textColor,
-                            side: BorderSide(color: Colors.grey.shade300),
+                            foregroundColor: primaryColor,
+                            side: BorderSide(color: primaryColor.withOpacity(0.3)),
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
-                          child: const Text('关闭'),
                         ),
                         const SizedBox(width: 12),
                         ElevatedButton(
@@ -694,16 +765,10 @@ class _TemplateListPageState extends State<TemplateListPage> {
             [],
       );
       
-      final pdfPath = await ApiService.generateDocument(
+      final pdfPath = await ApiService.getTemplate(
           details, template.name, Format.pdf.value, true);
-
-      if (File(pdfPath).existsSync()) {
-        _pdfPathNotifier.value = pdfPath;
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('无法加载PDF')),
-        );
-      }
+     
+      _pdfPathNotifier.value = pdfPath;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

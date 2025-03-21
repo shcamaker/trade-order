@@ -339,14 +339,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                         itemCount: _filteredCustomers.length,
                         itemBuilder: (context, index) {
                           final customer = _filteredCustomers[index];
-                          return ListTile(
-                            dense: true,
-                            title: Text(
-                              customer.name,
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            selected: _selectedCustomer?.id == customer.id,
-                            selectedTileColor: const Color(0xFF4CAF50).withOpacity(0.1),
+                          return InkWell(
                             onTap: () {
                               setState(() {
                                 _selectedCustomer = customer;
@@ -356,6 +349,46 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                               });
                               _hideOverlay();
                             },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: _selectedCustomer?.id == customer.id 
+                                    ? const Color(0xFF4CAF50).withOpacity(0.1) 
+                                    : Colors.transparent,
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: Colors.grey.shade200,
+                                    width: 1,
+                                  ),
+                                ),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16, 
+                                vertical: 12, // 增加垂直内边距，扩大点击区域
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    customer.name,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: _selectedCustomer?.id == customer.id 
+                                          ? FontWeight.bold 
+                                          : FontWeight.normal,
+                                      color: _selectedCustomer?.id == customer.id 
+                                          ? const Color(0xFF4CAF50)
+                                          : const Color(0xFF333333),
+                                    ),
+                                  ),
+                                  if (_selectedCustomer?.id == customer.id)
+                                    const Icon(
+                                      Icons.check,
+                                      color: Color(0xFF4CAF50),
+                                      size: 16,
+                                    ),
+                                ],
+                              ),
+                            ),
                           );
                         },
                       ),
