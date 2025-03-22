@@ -77,9 +77,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
 
   // 添加搜索相关的状态变量
   final TextEditingController _searchController = TextEditingController();
-  final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
-  bool _isSearching = false;
   List<Customer> _filteredCustomers = [];
   final FocusNode _searchFocusNode = FocusNode();
 
@@ -256,18 +254,19 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
     });
   }
 
-  // 修改显示下拉框方法 - 简化实现
+  // 修改显示下拉框方法 - 使用与_showDropdownOverlay相同的实现方式
   void _showOverlay(BuildContext context) {
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
-
-    final overlay = Overlay.of(context);
     
     // 获取选择框的位置和大小
     final position = renderBox.localToGlobal(Offset.zero);
     final size = renderBox.size;
 
+    // 关闭可能存在的overlay
     _overlayEntry?.remove();
+    
+    // 创建新的overlay
     _overlayEntry = OverlayEntry(
       builder: (context) => Stack(
         children: [
@@ -302,7 +301,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 搜索框
+                    // 搜索框 - 保留搜索功能
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: TextField(
@@ -332,35 +331,35 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                       ),
                     ),
                     const Divider(height: 1),
-                    // 客户列表 - 简化实现
+                    // 客户列表 - 使用与_showDropdownOverlay相同的实现方式
                     Flexible(
                       child: ListView.builder(
                         shrinkWrap: true,
+                        padding: EdgeInsets.zero,
                         itemCount: _filteredCustomers.length,
                         itemBuilder: (context, index) {
                           final customer = _filteredCustomers[index];
-                          // 使用简单的ListTile代替复杂的自定义组件
+                          // 使用与编辑项下拉相同的ListTile实现
                           return ListTile(
                             dense: true,
                             title: Text(
                               customer.name,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: const Color(0xFF333333),
-                              ),
+                              style: const TextStyle(fontSize: 14),
                             ),
-                            // 简化选择逻辑
+                            // 使用与编辑项下拉相同的选中指示
+                            selected: _selectedCustomer?.id == customer.id,
+                            selectedTileColor: const Color(0xFF4CAF50).withOpacity(0.1),
+                            // 先设置值，再关闭覆盖层，与_showDropdownOverlay一致
                             onTap: () {
-                              _hideOverlay();
+                              final selectedCustomer = customer;
                               setState(() {
-                                _selectedCustomer = customer;
+                                _selectedCustomer = selectedCustomer;
                               });
-                              _fillFormWithCustomerData(customer);
+                              // 先填充表单
+                              _fillFormWithCustomerData(selectedCustomer);
+                              // 再关闭覆盖层
+                              _hideOverlay();
                             },
-                            // 简单的选中指示器
-                            trailing: _selectedCustomer?.id == customer.id
-                                ? const Icon(Icons.check, color: Color(0xFF4CAF50), size: 16)
-                                : null,
                           );
                         },
                       ),
@@ -374,8 +373,8 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
       ),
     );
 
-    overlay.insert(_overlayEntry!);
-    _isSearching = true;
+    // 插入overlay
+    Overlay.of(context).insert(_overlayEntry!);
     _searchFocusNode.requestFocus();
   }
 
@@ -383,7 +382,6 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
   void _hideOverlay() {
     _overlayEntry?.remove();
     _overlayEntry = null;
-    _isSearching = false;
     _searchController.clear();
   }
 
