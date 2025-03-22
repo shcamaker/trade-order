@@ -76,10 +76,10 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
   final Map<String, TextEditingController> _controllers = {};
 
   // 添加搜索相关的状态变量
-  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _customerSearchController = TextEditingController();
+  final FocusNode _customerFocusNode = FocusNode();
   OverlayEntry? _overlayEntry;
   List<Customer> _filteredCustomers = [];
-  final FocusNode _searchFocusNode = FocusNode();
 
   // 添加新的状态变量用于编辑项下拉框
   Map<String, OverlayEntry?> _dropdownOverlays = {};
@@ -91,17 +91,14 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
     _initPrefs();
     _filteredCustomers = List.from(_customers);
     
-    // 添加搜索监听
-    _searchController.addListener(() {
-      _filterCustomers(_searchController.text);
-    });
-    
-    // 添加焦点监听
-    _searchFocusNode.addListener(() {
-      if (!_searchFocusNode.hasFocus) {
-        _hideOverlay();
-      }
-    });
+    // 添加客户搜索监听
+    _customerSearchController.addListener(_onCustomerSearchChanged);
+  }
+
+  // 客户搜索文本变化处理
+  void _onCustomerSearchChanged() {
+    _filterCustomers(_customerSearchController.text);
+    // 不要在这里尝试显示下拉框，因为可能没有有效的context
   }
 
   void _initControllers() {
@@ -231,8 +228,8 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
     for (var controller in _controllers.values) {
       controller.dispose();
     }
-    _searchController.dispose();
-    _searchFocusNode.dispose();
+    _customerSearchController.dispose();
+    _customerFocusNode.dispose();
     _hideOverlay();
     // 清理所有下拉框
     _dropdownOverlays.values.forEach((overlay) => overlay?.remove());
@@ -254,21 +251,31 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
     });
   }
 
-  // 修改显示下拉框方法 - 使用与_showDropdownOverlay相同的实现方式
+  // 修改显示下拉框方法 - 移除搜索框，简化实现
   void _showOverlay(BuildContext context) {
+    // 安全检查
+    if (context == null) {
+      print("Context is null in _showOverlay");
+      return;
+    }
+    
+    // 查找渲染对象
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null) return;
+    if (renderBox == null) {
+      print("RenderBox is null in _showOverlay");
+      return;
+    }
     
     // 获取选择框的位置和大小
     final position = renderBox.localToGlobal(Offset.zero);
     final size = renderBox.size;
 
     // 关闭可能存在的overlay
-    _overlayEntry?.remove();
+    _hideOverlay();
     
     // 创建新的overlay
     _overlayEntry = OverlayEntry(
-      builder: (context) => Stack(
+      builder: (overlayContext) => Stack(
         children: [
           // 添加一个透明层来处理点击外部关闭
           Positioned.fill(
@@ -301,68 +308,49 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 搜索框 - 保留搜索功能
-                    // Padding(
-                    //   padding: const EdgeInsets.all(8.0),
-                    //   child: TextField(
-                    //     controller: _searchController,
-                    //     focusNode: _searchFocusNode,
-                    //     decoration: InputDecoration(
-                    //       hintText: '搜索客户...',
-                    //       prefixIcon: const Icon(Icons.search, size: 20),
-                    //       border: OutlineInputBorder(
-                    //         borderRadius: BorderRadius.circular(8),
-                    //         borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
-                    //       ),
-                    //       enabledBorder: OutlineInputBorder(
-                    //         borderRadius: BorderRadius.circular(8),
-                    //         borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
-                    //       ),
-                    //       focusedBorder: OutlineInputBorder(
-                    //         borderRadius: BorderRadius.circular(8),
-                    //         borderSide: const BorderSide(color: Color(0xFF4CAF50)),
-                    //       ),
-                    //       contentPadding: const EdgeInsets.symmetric(
-                    //         horizontal: 12,
-                    //         vertical: 8,
-                    //       ),
-                    //     ),
-                    //     style: const TextStyle(fontSize: 14),
-                    //   ),
-                    // ),
-                    const Divider(height: 1),
-                    // 客户列表 - 使用与_showDropdownOverlay相同的实现方式
+                    // 客户列表
                     Flexible(
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        padding: EdgeInsets.zero,
-                        itemCount: _filteredCustomers.length,
-                        itemBuilder: (context, index) {
-                          final customer = _filteredCustomers[index];
-                          // 使用与编辑项下拉相同的ListTile实现
-                          return ListTile(
-                            dense: true,
-                            title: Text(
-                              customer.name,
-                              style: const TextStyle(fontSize: 14),
+                      child: _filteredCustomers.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Text(
+                                  '没有找到匹配的客户',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              itemCount: _filteredCustomers.length,
+                              itemBuilder: (context, index) {
+                                final customer = _filteredCustomers[index];
+                                return ListTile(
+                                  dense: true,
+                                  title: Text(
+                                    customer.name,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                  selected: _selectedCustomer?.id == customer.id,
+                                  selectedTileColor: const Color(0xFF4CAF50).withOpacity(0.1),
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedCustomer = customer;
+                                      // 更新输入框文本为选中的客户名称
+                                      _customerSearchController.text = customer.name;
+                                    });
+                                    // 填充表单
+                                    _fillFormWithCustomerData(customer);
+                                    // 关闭覆盖层
+                                    _hideOverlay();
+                                  },
+                                );
+                              },
                             ),
-                            // 使用与编辑项下拉相同的选中指示
-                            selected: _selectedCustomer?.id == customer.id,
-                            selectedTileColor: const Color(0xFF4CAF50).withOpacity(0.1),
-                            // 先设置值，再关闭覆盖层，与_showDropdownOverlay一致
-                            onTap: () {
-                              final selectedCustomer = customer;
-                              setState(() {
-                                _selectedCustomer = selectedCustomer;
-                              });
-                              // 先填充表单
-                              _fillFormWithCustomerData(selectedCustomer);
-                              // 再关闭覆盖层
-                              _hideOverlay();
-                            },
-                          );
-                        },
-                      ),
                     ),
                   ],
                 ),
@@ -373,16 +361,14 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
       ),
     );
 
-    // 插入overlay
+    // 使用正确的方式插入overlay
     Overlay.of(context).insert(_overlayEntry!);
-    _searchFocusNode.requestFocus();
   }
 
   // 隐藏下拉框
   void _hideOverlay() {
     _overlayEntry?.remove();
     _overlayEntry = null;
-    _searchController.clear();
   }
 
   // 更新下拉框
@@ -660,7 +646,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
     );
   }
 
-  // 修改客户选择器
+  // 修改客户选择器 - 添加条件清空按钮
   Widget _buildCustomerSelector(Color hintTextColor, Color borderColor) {
     const Color primaryColor = Color(0xFF4CAF50);
     return Row(
@@ -686,38 +672,79 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
           ),
         ),
         const SizedBox(width: 16),
-        // 自定义下拉框部分
+        // 客户搜索输入框 - 添加条件清空按钮
         Expanded(
           child: Builder(
-            builder: (context) => InkWell(
-              onTap: () => _showOverlay(context),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: borderColor),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _selectedCustomer?.name ?? '请选择客户',
-                        style: TextStyle(
-                          color: _selectedCustomer != null
-                              ? const Color(0xFF333333)
-                              : hintTextColor,
-                          fontSize: 16,
-                        ),
+            builder: (context) => GestureDetector(
+              onTap: () {
+                // 确保弹出下拉框，这是关键修复
+                _showOverlay(context);
+                // 然后请求焦点
+                _customerFocusNode.requestFocus();
+              },
+              child: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _customerSearchController,
+                builder: (context, value, child) {
+                  // 根据输入框内容决定是否显示清空按钮
+                  final bool hasText = value.text.isNotEmpty;
+                  return TextField(
+                    controller: _customerSearchController,
+                    focusNode: _customerFocusNode,
+                    decoration: InputDecoration(
+                      hintText: '请选择或搜索客户',
+                      hintStyle: TextStyle(color: hintTextColor),
+                      // 条件显示清空按钮
+                      suffixIcon: hasText 
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, color: Color(0xFF999999), size: 20),
+                              splashRadius: 20,
+                              onPressed: () {
+                                // 清空输入框
+                                _customerSearchController.clear();
+                                // 重置选中客户
+                                setState(() {
+                                  _selectedCustomer = null;
+                                });
+                                // 重新显示所有客户
+                                _filterCustomers('');
+                                // 显示下拉框以便重新选择
+                                _showOverlay(context);
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: borderColor),
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: primaryColor),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
-                    const Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 22,
-                      color: Color(0xFF999999),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF333333),
                     ),
-                  ],
-                ),
+                    onTap: () {
+                      // 确保点击输入框时显示下拉框
+                      _showOverlay(context);
+                    },
+                    onChanged: (value) {
+                      // 在文本改变时过滤客户并显示下拉框
+                      _filterCustomers(value);
+                      if (_overlayEntry == null) {
+                        _showOverlay(context);
+                      }
+                    },
+                  );
+                },
               ),
             ),
           ),
