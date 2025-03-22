@@ -243,6 +243,8 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
 
   // 过滤客户列表
   void _filterCustomers(String query) {
+    if (!mounted) return;
+    
     setState(() {
       if (query.isEmpty) {
         _filteredCustomers = List.from(_customers);
@@ -252,8 +254,10 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                 customer.name.toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
-      _updateOverlay();
     });
+    
+    // 确保下拉框内容更新
+    _updateOverlay();
   }
 
   // 修改显示下拉框方法
@@ -339,54 +343,63 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                         itemCount: _filteredCustomers.length,
                         itemBuilder: (context, index) {
                           final customer = _filteredCustomers[index];
-                          return InkWell(
-                            onTap: () {
-                              setState(() {
-                                _selectedCustomer = customer;
-                                if (customer != null) {
-                                  _fillFormWithCustomerData(customer);
-                                }
-                              });
-                              _hideOverlay();
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: _selectedCustomer?.id == customer.id 
-                                    ? const Color(0xFF4CAF50).withOpacity(0.1) 
-                                    : Colors.transparent,
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: Colors.grey.shade200,
-                                    width: 1,
+                          return Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                // 在Windows平台上可能需要使用Future.delayed确保UI更新
+                                Future.microtask(() {
+                                  if (mounted) {
+                                    setState(() {
+                                      _selectedCustomer = customer;
+                                    });
+                                    // 确保在状态更新后填充表单
+                                    if (customer != null) {
+                                      _fillFormWithCustomerData(customer);
+                                    }
+                                    _hideOverlay();
+                                  }
+                                });
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: _selectedCustomer?.id == customer.id 
+                                      ? const Color(0xFF4CAF50).withOpacity(0.1) 
+                                      : Colors.transparent,
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: Colors.grey.shade200,
+                                      width: 1,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16, 
-                                vertical: 12, // 增加垂直内边距，扩大点击区域
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    customer.name,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: _selectedCustomer?.id == customer.id 
-                                          ? FontWeight.bold 
-                                          : FontWeight.normal,
-                                      color: _selectedCustomer?.id == customer.id 
-                                          ? const Color(0xFF4CAF50)
-                                          : const Color(0xFF333333),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, 
+                                  vertical: 12, // 增加垂直内边距，扩大点击区域
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      customer.name,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: _selectedCustomer?.id == customer.id 
+                                            ? FontWeight.bold 
+                                            : FontWeight.normal,
+                                        color: _selectedCustomer?.id == customer.id 
+                                            ? const Color(0xFF4CAF50)
+                                            : const Color(0xFF333333),
+                                      ),
                                     ),
-                                  ),
-                                  if (_selectedCustomer?.id == customer.id)
-                                    const Icon(
-                                      Icons.check,
-                                      color: Color(0xFF4CAF50),
-                                      size: 16,
-                                    ),
-                                ],
+                                    if (_selectedCustomer?.id == customer.id)
+                                      const Icon(
+                                        Icons.check,
+                                        color: Color(0xFF4CAF50),
+                                        size: 16,
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           );
@@ -719,7 +732,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
         // 自定义下拉框部分
         Expanded(
           child: Builder(
-            builder: (context) => GestureDetector(
+            builder: (context) => InkWell(
               onTap: () => _showOverlay(context),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -947,5 +960,29 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
         }
       }
     }
+  }
+
+  // 添加调试辅助方法
+  void _printDebugInfo(String location, [String? message]) {
+    print('【调试信息】位置: $location ${message != null ? '- $message' : ''}');
+  }
+
+  // 修改为直接使用setState()选择客户的方法
+  void _selectCustomer(Customer customer) {
+    if (!mounted) return;
+    
+    _printDebugInfo('_selectCustomer', '尝试选择客户: ${customer.name}');
+    
+    // 关闭下拉框
+    _hideOverlay();
+    
+    // 使用setState更新状态
+    setState(() {
+      _selectedCustomer = customer;
+      _printDebugInfo('_selectCustomer', '已设置选中客户: ${customer.name}');
+    });
+    
+    // 填充表单数据
+    _fillFormWithCustomerData(customer);
   }
 }
