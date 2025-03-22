@@ -302,34 +302,34 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // 搜索框 - 保留搜索功能
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextField(
-                        controller: _searchController,
-                        focusNode: _searchFocusNode,
-                        decoration: InputDecoration(
-                          hintText: '搜索客户...',
-                          prefixIcon: const Icon(Icons.search, size: 20),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Color(0xFF4CAF50)),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ),
+                    // Padding(
+                    //   padding: const EdgeInsets.all(8.0),
+                    //   child: TextField(
+                    //     controller: _searchController,
+                    //     focusNode: _searchFocusNode,
+                    //     decoration: InputDecoration(
+                    //       hintText: '搜索客户...',
+                    //       prefixIcon: const Icon(Icons.search, size: 20),
+                    //       border: OutlineInputBorder(
+                    //         borderRadius: BorderRadius.circular(8),
+                    //         borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+                    //       ),
+                    //       enabledBorder: OutlineInputBorder(
+                    //         borderRadius: BorderRadius.circular(8),
+                    //         borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+                    //       ),
+                    //       focusedBorder: OutlineInputBorder(
+                    //         borderRadius: BorderRadius.circular(8),
+                    //         borderSide: const BorderSide(color: Color(0xFF4CAF50)),
+                    //       ),
+                    //       contentPadding: const EdgeInsets.symmetric(
+                    //         horizontal: 12,
+                    //         vertical: 8,
+                    //       ),
+                    //     ),
+                    //     style: const TextStyle(fontSize: 14),
+                    //   ),
+                    // ),
                     const Divider(height: 1),
                     // 客户列表 - 使用与_showDropdownOverlay相同的实现方式
                     Flexible(
