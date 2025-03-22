@@ -31,12 +31,22 @@ class _TemplateListPageState extends State<TemplateListPage> {
 
   Future<void> _loadTemplates() async {
     try {
-      // 读取JSON文件
-      final String jsonString = await rootBundle
-          .loadString('lib/ShipmentManagement/models/templates.json');
-      final Map<String, dynamic> jsonData = json.decode(jsonString);
+      setState(() {
+        isLoading = true;
+      });
+      
+      // 增加调试日志
+      debugPrint('开始加载模板数据...');
+      
+      // 读取JSON文件 - 首先尝试从assets目录加载（标准做法）
+      String jsonString;
+      // 推荐的标准路径
+      jsonString = await rootBundle.loadString('assets/templates/templates.json');
+      debugPrint('成功从assets目录加载模板数据');
 
       // 解析JSON数据
+      final Map<String, dynamic> jsonData = json.decode(jsonString);
+      
       setState(() {
         templates = (jsonData['templates'] as List)
             .map((template) => TemplateModel.fromJson(template))
@@ -45,7 +55,12 @@ class _TemplateListPageState extends State<TemplateListPage> {
         isLoading = false;
       });
     } catch (e) {
-      print('Error loading templates: $e');
+      // 显示错误提示
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('模板加载失败: $e'), duration: const Duration(seconds: 5)),
+        );
+      }
       setState(() {
         isLoading = false;
       });
@@ -237,42 +252,36 @@ class _TemplateListPageState extends State<TemplateListPage> {
   }
 
   Widget _buildBody(BuildContext context, Color primaryColor, Color textColor) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 根据屏幕宽度调整内边距
-        double horizontalPadding = constraints.maxWidth < 600 ? 12.0 : 24.0;
-        
-        return SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.all(horizontalPadding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 只在选择"单据模板"时显示页面标题、描述和分类标签
-                if (_selectedFunction == '单据模板') ...[
-                  // 页面标题和描述
-                  _buildPageHeader(primaryColor, textColor),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // 模板分类标签
-                  _buildCategoryTabs(primaryColor),
-                  
-                  const SizedBox(height: 16),
-                ],
-                
-                // 根据选中的功能显示不同内容
-                SizedBox(
-                  height: MediaQuery.of(context).size.height - 240, // 设置固定高度
-                  child: _selectedFunction == '单据模板' 
-                      ? _buildTemplatesContent(context, primaryColor, textColor)
-                      : _buildComingSoonContent(context, primaryColor, textColor),
-                ),
-              ],
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 只在选择"单据模板"时显示页面标题、描述和分类标签
+            if (_selectedFunction == '单据模板') ...[
+              // 页面标题和描述
+              _buildPageHeader(primaryColor, textColor),
+              
+              const SizedBox(height: 16),
+              
+              // 模板分类标签
+              _buildCategoryTabs(primaryColor),
+              
+              const SizedBox(height: 16),
+            ],
+            
+            // 根据选中的功能显示不同内容 - 注意这里不再使用SizedBox包裹
+            Container(
+              // 使用Container代替SizedBox，并移除Expanded包装
+              height: MediaQuery.of(context).size.height - 240, // 设置固定高度
+              child: _selectedFunction == '单据模板' 
+                  ? _buildTemplatesContentWithoutExpanded(context, primaryColor, textColor)
+                  : _buildComingSoonContentWithoutExpanded(context, primaryColor, textColor),
             ),
-          ),
-        );
-      }
+          ],
+        ),
+      ),
     );
   }
   
@@ -284,34 +293,38 @@ class _TemplateListPageState extends State<TemplateListPage> {
         double titleSize = constraints.maxWidth < 600 ? 20 : 24;
         double descSize = constraints.maxWidth < 600 ? 12 : 14;
         
-        return SizedBox(
-          width: double.infinity,
-          child: Column(
-            children: [
-              Center(
-                child: Text(
-                  '单据模板',
-                  style: TextStyle(
-                    fontSize: titleSize,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
+        return Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: Column(
+                children: [
+                  Center(
+                    child: Text(
+                      '单据模板',
+                      style: TextStyle(
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  '选择并编辑适合您业务需求的单据模板',
-                  style: TextStyle(
-                    fontSize: descSize,
-                    color: textColor.withOpacity(0.7),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Text(
+                      '选择并编辑适合您业务需求的单据模板',
+                      style: TextStyle(
+                        fontSize: descSize,
+                        color: textColor.withOpacity(0.7),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         );
       }
     );
@@ -410,44 +423,42 @@ class _TemplateListPageState extends State<TemplateListPage> {
     );
   }
 
-  // 单据模板内容
-  Widget _buildTemplatesContent(BuildContext context, Color primaryColor, Color textColor) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // 模板网格
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: filteredTemplates.isEmpty
-                  ? _buildEmptyState(primaryColor, textColor)
-                  : LayoutBuilder(
-                      builder: (context, constraints) {
-                        // 根据可用宽度动态计算每行显示的卡片数量
-                        int crossAxisCount = _calculateGridColumns(constraints.maxWidth);
-                        // 更改宽高比让卡片更小
-                        double childAspectRatio = constraints.maxWidth < 600 ? 1.1 : 1.2;
-                        
-                        return GridView.builder(
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            childAspectRatio: childAspectRatio, // 增加宽高比使卡片更"扁"
-                          ),
-                          itemCount: filteredTemplates.length,
-                          itemBuilder: (context, index) {
-                            final template = filteredTemplates[index];
-                            return _buildTemplateCard(context, template, primaryColor, textColor);
-                          },
-                        );
-                      }
-                    ),
-            ),
+  // 修改后的模板内容构建方法，不使用Expanded
+  Widget _buildTemplatesContentWithoutExpanded(BuildContext context, Color primaryColor, Color textColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // 模板网格 - 使用Flexible替代Expanded
+        Flexible(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: filteredTemplates.isEmpty
+                ? _buildEmptyState(primaryColor, textColor)
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      // 根据可用宽度动态计算每行显示的卡片数量
+                      int crossAxisCount = _calculateGridColumns(constraints.maxWidth);
+                      // 更改宽高比让卡片更小
+                      double childAspectRatio = constraints.maxWidth < 600 ? 1.1 : 1.2;
+                      
+                      return GridView.builder(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: childAspectRatio, // 增加宽高比使卡片更"扁"
+                        ),
+                        itemCount: filteredTemplates.length,
+                        itemBuilder: (context, index) {
+                          final template = filteredTemplates[index];
+                          return _buildTemplateCard(context, template, primaryColor, textColor);
+                        },
+                      );
+                    }
+                  ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
   
@@ -820,54 +831,52 @@ class _TemplateListPageState extends State<TemplateListPage> {
     }
   }
 
-  // 即将推出的内容提示
-  Widget _buildComingSoonContent(BuildContext context, Color primaryColor, Color textColor) {
-    return Expanded(
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.construction,
-              size: 80,
-              color: primaryColor.withAlpha(50),
+  // 修改后的即将推出内容构建方法，不使用Expanded
+  Widget _buildComingSoonContentWithoutExpanded(BuildContext context, Color primaryColor, Color textColor) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.construction,
+            size: 80,
+            color: primaryColor.withAlpha(50),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            '功能待定',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
             ),
-            const SizedBox(height: 24),
-            Text(
-              '功能待定',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: primaryColor,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '该功能模块待定',
+            style: TextStyle(
+              fontSize: 16,
+              color: textColor.withAlpha(70),
+            ),
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _selectedFunction = '单据模板';
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              '该功能模块待定',
-              style: TextStyle(
-                fontSize: 16,
-                color: textColor.withAlpha(70),
-              ),
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _selectedFunction = '单据模板';
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('返回单据模板'),
-            ),
-          ],
-        ),
+            child: const Text('返回单据模板'),
+          ),
+        ],
       ),
     );
   }

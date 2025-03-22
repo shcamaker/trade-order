@@ -96,6 +96,7 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
 
+  # 标准的资源配置方式
   assets:
-    - assets/templates/
-    - lib/ShipmentManagement/models/templates.json
+    - assets/
+    - assets/templates/templates.json

@@ -1,9 +1,17 @@
 class Config {
   // 更可靠地检测生产环境
   static bool get isProduction {
-    const prodEnv =
-        bool.fromEnvironment('FLUTTER_WEB_AUTO_DETECT', defaultValue: false);
-    return prodEnv || const bool.fromEnvironment('dart.vm.product');
+    // 检查是否为release模式
+    const bool isReleaseMode = bool.fromEnvironment('dart.vm.product');
+    
+    // 检查是否为桌面应用
+    const bool isDesktopApp = !bool.fromEnvironment('dart.vm.debug', defaultValue: true);
+    
+    // 添加标志，允许手动覆盖环境设置
+    const bool forceProduction = bool.fromEnvironment('FORCE_PRODUCTION', defaultValue: false);
+    
+    // 对于桌面应用和release版本，总是使用生产环境
+    return isReleaseMode || isDesktopApp || forceProduction;
   }
 
   // API 基础URL

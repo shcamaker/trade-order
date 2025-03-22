@@ -35,5 +35,15 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>需要此权限以正确加载应用资源。</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>需要此权限以正确加载应用资源。</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>需要此权限以正确加载应用资源。</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>需要此权限以正确加载应用资源。</string>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
 </dict>
 </plist>

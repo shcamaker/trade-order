@@ -82,7 +82,6 @@ enum Format {
   final String value;
   const Format(this.value);
 }
-
 enum TemplateType {
   export('出口单据'),
   import('进口单据'),
