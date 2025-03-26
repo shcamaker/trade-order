@@ -36,16 +36,22 @@ class _TemplateListPageState extends State<TemplateListPage> {
       });
       
       // 增加调试日志
-      debugPrint('开始加载模板数据...');
+      debugPrint('开始从API加载模板数据...');
       
-      // 读取JSON文件 - 首先尝试从assets目录加载（标准做法）
-      String jsonString;
-      // 推荐的标准路径
-      jsonString = await rootBundle.loadString('assets/templates/templates.json');
-      debugPrint('成功从assets目录加载模板数据');
-
-      // 解析JSON数据
-      final Map<String, dynamic> jsonData = json.decode(jsonString);
+      Map<String, dynamic> jsonData;
+      
+      try {
+        // 尝试从API获取模板数据
+        jsonData = await ApiService.getTemplates();
+        debugPrint('成功从API获取模板数据');
+      } catch (apiError) {
+        debugPrint('从API获取模板数据失败: $apiError，尝试从本地资源加载...');
+        
+        // 如果API请求失败，尝试从本地assets加载（作为备选方案）
+        String jsonString = await rootBundle.loadString('assets/templates/templates.json');
+        jsonData = json.decode(jsonString);
+        debugPrint('成功从本地assets加载模板数据');
+      }
       
       setState(() {
         templates = (jsonData['templates'] as List)
@@ -54,14 +60,19 @@ class _TemplateListPageState extends State<TemplateListPage> {
         filteredTemplates = List.from(templates); // 初始化过滤后的列表
         isLoading = false;
       });
+      
+      debugPrint('成功加载了 ${templates.length} 个模板');
     } catch (e) {
       // 显示错误提示
+      debugPrint('模板加载过程中发生错误: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('模板加载失败: $e'), duration: const Duration(seconds: 5)),
         );
       }
       setState(() {
+        templates = [];
+        filteredTemplates = [];
         isLoading = false;
       });
     }

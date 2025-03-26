@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/template_model.dart';
-import './template_detail_page.dart';
+import 'template_detail_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'tips_view.dart';
+import '../models/theme_colors.dart';
 
 // 客户数据模型
 class Customer {
@@ -36,37 +38,11 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
   final List<Customer> _customers = [
     Customer(
       id: 'customer1',
-      name: '上海贸易有限公司',
+      name: 'ТОО «PURE PACK»',
       defaultValues: {
-        'exportPort': '上海',
-        'transportMode': '海运',
-        'tradeCountry': '美国',
-        'destinationPort': '洛杉矶',
-        'consumptionCountry': '美国',
+        
       },
-    ),
-    Customer(
-      id: 'customer2',
-      name: '广州进出口有限公司',
-      defaultValues: {
-        'exportPort': '广州',
-        'transportMode': '空运',
-        'tradeCountry': '德国',
-        'destinationPort': '汉堡',
-        'consumptionCountry': '德国',
-      },
-    ),
-    Customer(
-      id: 'customer3',
-      name: '深圳外贸集团',
-      defaultValues: {
-        'exportPort': '深圳',
-        'transportMode': '海运',
-        'tradeCountry': '日本',
-        'destinationPort': '东京',
-        'consumptionCountry': '日本',
-      },
-    ),
+    )
   ];
   
   // 当前选择的客户
@@ -82,7 +58,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
   List<Customer> _filteredCustomers = [];
 
   // 添加新的状态变量用于编辑项下拉框
-  Map<String, OverlayEntry?> _dropdownOverlays = {};
+  final Map<String, OverlayEntry?> _dropdownOverlays = {};
 
   @override
   void initState() {
@@ -122,13 +98,20 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
     setState(() {
       for (var info in widget.template.editableInfos ?? []) {
         final key = info.key;
+        
+        // 特殊处理客户名称字段 - 直接使用选中的客户名称
+        if (key == 'customerName') {
+          _controllers[key]?.text = customer.name;
+          continue; // 跳过后续处理，直接处理下一个字段
+        }
+        
         // 首先尝试加载该客户的保存默认值
         String? savedValue = _prefs.getString('${customer.id}_$key');
         
         // 如果有保存的默认值，优先使用
         if (savedValue != null && _controllers.containsKey(key)) {
           // 对于可选项，确保值在可选范围内
-          if (info.isSelectable && info.options != null) {
+          if (info.type == EditableType.dropdown && info.options != null) {
             if (info.options!.contains(savedValue)) {
               _controllers[key]?.text = savedValue;
             } else {
@@ -155,7 +138,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
     final defaultValue = customer.defaultValues[key] ?? '';
     
     // 如果是可选字段，确保值在可选范围内
-    if (info.isSelectable && info.options != null) {
+    if (info.type == EditableType.dropdown && info.options != null) {
       return info.options!.contains(defaultValue) ? defaultValue : '';
     }
     
@@ -187,6 +170,89 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
     return key;
   }
 
+  // 将数字转换为英文大写金额描述
+  String _convertNumberToWords(double number) {
+    // 处理零和负数
+    if (number == 0) return 'ZERO';
+    if (number < 0) return 'NEGATIVE ' + _convertNumberToWords(-number);
+
+    // 分离整数和小数部分
+    String numStr = number.toStringAsFixed(2);
+    List<String> parts = numStr.split('.');
+    int intPart = int.parse(parts[0]);
+    int decimalPart = int.parse(parts[1]);
+
+    // 数字到单词的映射
+    List<String> ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN', 
+                         'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
+    List<String> tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+    
+    // 递归函数转换大于1000的数字
+    String convertLessThanOneThousand(int number) {
+      if (number == 0) {
+        return '';
+      } else if (number < 20) {
+        return ones[number];
+      } else if (number < 100) {
+        return '${tens[number ~/ 10]} ${ones[number % 10]}'.trim();
+      } else {
+        return '${ones[number ~/ 100]} HUNDRED ${convertLessThanOneThousand(number % 100)}'.trim();
+      }
+    }
+
+    // 主要转换函数
+    String convertChunk(int number) {
+      if (number == 0) {
+        return 'ZERO';
+      }
+      
+      // 分块处理：十亿，百万，千
+      String result = '';
+      if (number >= 1000000000) {
+        result += '${convertLessThanOneThousand(number ~/ 1000000000)} BILLION ';
+        number %= 1000000000;
+      }
+      
+      if (number >= 1000000) {
+        result += '${convertLessThanOneThousand(number ~/ 1000000)} MILLION ';
+        number %= 1000000;
+      }
+      
+      if (number >= 1000) {
+        result += '${convertLessThanOneThousand(number ~/ 1000)} THOUSAND ';
+        number %= 1000;
+      }
+      
+      // 处理最后小于1000的部分
+      if (number > 0) {
+        // 如果前面已经有内容，并且后面还有内容，则添加AND
+        if (result.isNotEmpty) {
+          result += 'AND ';
+        }
+        result += convertLessThanOneThousand(number);
+      }
+      
+      return result.trim();
+    }
+
+    // 生成结果
+    String intWords = convertChunk(intPart);
+    
+    // 如果有小数部分
+    String decimalWords = '';
+    if (decimalPart > 0) {
+      String cents = decimalPart.toString().padLeft(2, '0');
+      if (cents == '01') {
+        decimalWords = ' AND ONE CENT';
+      } else {
+        decimalWords = ' AND ${convertLessThanOneThousand(decimalPart)} CENTS';
+      }
+    }
+
+    // 返回结果，SAY开头，DOLLARS ONLY结尾
+    return '${intWords} DOLLARS${decimalWords}';
+  }
+  
   // Calculate total amount
   void _calculateTotalAmount() {
     final netWeight =
@@ -194,7 +260,13 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
     final unitPrice =
         double.tryParse(_controllers['unitPrice']?.text ?? '') ?? 0;
     final total = netWeight * unitPrice;
+    
+    // 设置数值金额
     _controllers['totalAmount']?.text = total.toStringAsFixed(2);
+    
+    // 设置英文大写金额
+    String totalInWords = _convertNumberToWords(total);
+    _controllers['totalAmountInWords']?.text = totalInWords;
   }
 
   // 清除当前客户的所有默认值
@@ -253,11 +325,6 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
 
   // 修改显示下拉框方法 - 移除搜索框，简化实现
   void _showOverlay(BuildContext context) {
-    // 安全检查
-    if (context == null) {
-      print("Context is null in _showOverlay");
-      return;
-    }
     
     // 查找渲染对象
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
@@ -290,7 +357,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
           // 下拉框内容
           Positioned(
             left: position.dx,
-            top: position.dy + size.height + 5,
+            top: position.dy + size.height+2,
             width: size.width,
             child: Material(
               elevation: 8,
@@ -323,31 +390,73 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                                 ),
                               ),
                             )
-                          : ListView.builder(
+                          : ListView.separated(
                               shrinkWrap: true,
                               padding: EdgeInsets.zero,
                               itemCount: _filteredCustomers.length,
                               itemBuilder: (context, index) {
                                 final customer = _filteredCustomers[index];
-                                return ListTile(
-                                  dense: true,
-                                  title: Text(
-                                    customer.name,
-                                    style: const TextStyle(fontSize: 14),
+                                // 创建带自定义样式的列表项
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    // 增强选中项的背景色
+                                    color: _selectedCustomer?.id == customer.id
+                                        ? const Color(0xFF4CAF50).withOpacity(0.05) // 增加背景色不透明度
+                                        : Colors.transparent,
                                   ),
-                                  selected: _selectedCustomer?.id == customer.id,
-                                  selectedTileColor: const Color(0xFF4CAF50).withOpacity(0.1),
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedCustomer = customer;
-                                      // 更新输入框文本为选中的客户名称
-                                      _customerSearchController.text = customer.name;
-                                    });
-                                    // 填充表单
-                                    _fillFormWithCustomerData(customer);
-                                    // 关闭覆盖层
-                                    _hideOverlay();
-                                  },
+                                  child: ListTile(
+                                    dense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 2, // 稍微增加垂直内边距
+                                    ),
+                                    title: Text(
+                                      customer.name,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        // 选中时使用绿色文本
+                                        color: _selectedCustomer?.id == customer.id
+                                            ? const Color(0xFF4CAF50)
+                                            : const Color(0xFF333333),
+                                        // 选中时加粗
+                                        fontWeight: _selectedCustomer?.id == customer.id
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                    // 不使用默认selected样式
+                                    selected: false,
+                                    // 添加选中勾号图标
+                                    trailing: _selectedCustomer?.id == customer.id
+                                        ? const Icon(
+                                            Icons.check,
+                                            color: Color(0xFF4CAF50),
+                                            size: 18,
+                                          )
+                                        : null,
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedCustomer = customer;
+                                        // 更新输入框文本为选中的客户名称
+                                        _customerSearchController.text = customer.name;
+                                      });
+                                      // 填充表单
+                                      _fillFormWithCustomerData(customer);
+                                      // 关闭覆盖层
+                                      _hideOverlay();
+                                    },
+                                  ),
+                                );
+                              },
+                              // 添加分隔线构建器
+                              separatorBuilder: (context, index) {
+                                // 返回分隔线
+                                return const Divider(
+                                  height: 1,
+                                  thickness: 0.5,
+                                  color: Color(0xFFEEEEEE), // 浅灰色分隔线
+                                  indent: 16, // 左侧缩进
+                                  endIndent: 16, // 右侧缩进
                                 );
                               },
                             ),
@@ -393,37 +502,69 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
   // 构建下拉选择框
   Widget _buildDropdown(EditableInfo info, TextEditingController controller, Color hintTextColor, Color borderColor) {
     return Builder(
-      builder: (context) => GestureDetector(
-        onTap: () {
-          _hideAllDropdownOverlays(); // 先隐藏所有下拉框
-          _showDropdownOverlay(context, info, controller);
+      builder: (context) => FormField<String>(
+        initialValue: controller.text,
+        validator: (value) {
+          if ((value == null || value.isEmpty) && info.isRequired) {
+            return '请选择${info.name}';
+          }
+          return null;
         },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: borderColor),
-          ),
-          child: Row(
+        builder: (FormFieldState<String> field) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: Text(
-                  controller.text.isEmpty ? info.hintText : controller.text,
-                  style: TextStyle(
-                    color: controller.text.isEmpty ? hintTextColor : const Color(0xFF333333),
-                    fontSize: 14,
+              GestureDetector(
+                onTap: () {
+                  _hideAllDropdownOverlays(); // 先隐藏所有下拉框
+                  _showDropdownOverlay(context, info, controller);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: field.hasError ? Colors.red : borderColor,
+                      width: field.hasError ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          controller.text.isEmpty ? info.hintText : controller.text,
+                          style: TextStyle(
+                            color: controller.text.isEmpty ? hintTextColor : const Color(0xFF333333),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      const Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 20,
+                        color: Color(0xFF999999),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const Icon(
-                Icons.keyboard_arrow_down,
-                size: 20,
-                color: Color(0xFF999999),
-              ),
+              // 显示错误信息
+              if (field.hasError)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, top: 4),
+                  child: Text(
+                    field.errorText!,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -467,26 +608,73 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: const Color(0xFFEEEEEE)),
                 ),
-                child: ListView.builder(
+                child: ListView.separated(
                   shrinkWrap: true,
                   padding: EdgeInsets.zero,
                   itemCount: info.options?.length ?? 0,
                   itemBuilder: (context, index) {
                     final option = info.options![index];
-                    return ListTile(
-                      dense: true,
-                      title: Text(
-                        option,
-                        style: const TextStyle(fontSize: 14),
+                    return Container(
+                      decoration: BoxDecoration(
+                        // 增强选中项的背景色
+                        color: controller.text == option
+                            ? ThemeColors.primaryColor.withOpacity(0.2) // 增加背景色不透明度
+                            : Colors.transparent,
+                        // 添加左侧高亮边框
+                        border: controller.text == option
+                            ? const Border(
+                                left: BorderSide(
+                                  color: ThemeColors.primaryColor,
+                                  width: 3,
+                                ),
+                              )
+                            : null,
                       ),
-                      selected: controller.text == option,
-                      selectedTileColor: const Color(0xFF4CAF50).withOpacity(0.1),
-                      onTap: () {
-                        setState(() {
-                          controller.text = option;
-                        });
-                        _hideDropdownOverlay(info.key);
-                      },
+                      child:ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8, // 增加垂直内边距
+                        ),
+                        title: Text(
+                          option,
+                          style: TextStyle(
+                            fontSize: 14,
+                            // 选中时使用绿色文本
+                            color: controller.text == option
+                              ? ThemeColors.primaryColor
+                              : const Color(0xFF333333),
+                            // 选中时加粗
+                            fontWeight: controller.text == option
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          ),
+                        ),
+                        selected: false,
+                        trailing: controller.text == option
+                          ? const Icon(
+                              Icons.check,
+                              color: ThemeColors.primaryColor,
+                              size: 18,
+                            )
+                          : null,
+                        onTap: () {
+                          setState(() {
+                            controller.text = option;
+                          });
+                          _hideDropdownOverlay(info.key);
+                        },
+                      ),
+                    );
+                  },
+                  separatorBuilder: (context, index) {
+                    // 返回分隔线
+                    return const Divider(
+                      height: 1,
+                      thickness: 0.5,
+                      color: Color(0xFFEEEEEE), // 浅灰色分隔线
+                      indent: 16, // 左侧缩进
+                      endIndent: 16, // 右侧缩进
                     );
                   },
                 ),
@@ -502,30 +690,21 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 定义颜色常量 - 与主页匹配的配色方案
-    const Color backgroundColor = Colors.white; // 白色背景
-    const Color titleColor = Color(0xFF333333); // 深灰色标题
-    const Color primaryColor = Color(0xFF4CAF50); // 绿色主色调（与TRADE-ASSISTANT标志匹配）
-    const Color defaultButtonColor = Color(0xFF4CAF50); // 绿色按钮
-    const Color saveButtonColor = Color(0xFF4CAF50); // 绿色保存按钮
-    const Color hintTextColor = Color(0xFF999999); // 浅灰色提示文字
-    const Color borderColor = Color(0xFFEEEEEE); // 浅灰色边框
-    const Color cardBackgroundColor = Colors.white; // 卡片背景色
     
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: ThemeColors.backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: titleColor, size: 20),
+          icon: const Icon(Icons.arrow_back_ios, color: ThemeColors.titleColor, size: 20),
           onPressed: () => Navigator.of(context).pop(),
           tooltip: '返回上一页',
         ),
         title: Text(
           '编辑${widget.template.name}',
           style: const TextStyle(
-            color: titleColor,
+            color: ThemeColors.titleColor,
             fontWeight: FontWeight.bold,
             fontSize: 20,
             letterSpacing: 0.5,
@@ -535,7 +714,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
           Tooltip(
             message: '清除当前客户的所有默认值',
             child: IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, color: primaryColor),
+              icon: const Icon(Icons.delete_outline_rounded, color: ThemeColors.primaryColor),
               onPressed: _clearAllDefaults,
             ),
           ),
@@ -551,55 +730,25 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 添加提示文字
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50).withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: const Color(0xFF4CAF50).withOpacity(0.1),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.tips_and_updates,
-                            color: const Color(0xFF4CAF50).withOpacity(0.7),
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Text(
-                              '可以选择客户，灵活设置各项参数的默认值，实现单据系统的个性化配置',
-                              style: TextStyle(
-                                color: Color(0xFF666666),
-                                fontSize: 14,
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    const TipsView(text: '可以选择客户，灵活设置各项参数的默认值，实现单据系统的个性化配置'),
                     const SizedBox(height: 16),
                     
                     // 客户选择区域
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.05),
+                        color: ThemeColors.primaryColor.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: primaryColor.withOpacity(0.05),
+                            color: ThemeColors.primaryColor.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
                         ],
-                        border: Border.all(color: primaryColor.withOpacity(0.1), width: 1),
+                        border: Border.all(color: ThemeColors.primaryColor.withValues(alpha: 0.1), width: 1),
                       ),
-                      child: _buildCustomerSelector(hintTextColor, borderColor),
+                      child: _buildCustomerSelector(ThemeColors.hintTextColor, ThemeColors.borderColor),
                     ),
                     
                     const SizedBox(height: 24),
@@ -612,7 +761,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                         crossAxisCount: 2,
                         crossAxisSpacing: 50, // 增加列间距
                         mainAxisSpacing: 20,
-                        mainAxisExtent: 80,
+                        mainAxisExtent: 110,
                       ),
                       itemCount: widget.template.editableInfos?.length ?? 0,
                       itemBuilder: (context, index) {
@@ -620,7 +769,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                         return Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: cardBackgroundColor,
+                            color: ThemeColors.cardBackgroundColor,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
@@ -629,9 +778,9 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                                 offset: const Offset(0, 2),
                               ),
                             ],
-                            border: Border.all(color: borderColor, width: 1),
+                            border: Border.all(color: ThemeColors.borderColor, width: 1),
                           ),
-                          child: _buildFormField(info, defaultButtonColor, hintTextColor, borderColor),
+                          child: _buildFormField(info, ThemeColors.defaultButtonColor, ThemeColors.hintTextColor, ThemeColors.borderColor),
                         );
                       },
                     ),
@@ -639,7 +788,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
                 ),
               ),
             ),
-            _buildBottomBar(saveButtonColor),
+            _buildBottomBar(ThemeColors.saveButtonColor),
           ],
         ),
       ),
@@ -648,7 +797,6 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
 
   // 修改客户选择器 - 添加条件清空按钮
   Widget _buildCustomerSelector(Color hintTextColor, Color borderColor) {
-    const Color primaryColor = Color(0xFF4CAF50);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -657,7 +805,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
           width: 180,
           child: Row(
             children: [
-              Icon(Icons.business, color: primaryColor, size: 24),
+              Icon(Icons.business, color: ThemeColors.primaryColor, size: 24),
               SizedBox(width: 12),
               Text(
                 '选择客户',
@@ -674,79 +822,69 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
         const SizedBox(width: 16),
         // 客户搜索输入框 - 添加条件清空按钮
         Expanded(
-          child: Builder(
-            builder: (context) => GestureDetector(
-              onTap: () {
-                // 确保弹出下拉框，这是关键修复
-                _showOverlay(context);
-                // 然后请求焦点
-                _customerFocusNode.requestFocus();
-              },
-              child: ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _customerSearchController,
-                builder: (context, value, child) {
-                  // 根据输入框内容决定是否显示清空按钮
-                  final bool hasText = value.text.isNotEmpty;
-                  return TextField(
-                    controller: _customerSearchController,
-                    focusNode: _customerFocusNode,
-                    decoration: InputDecoration(
-                      hintText: '请选择或搜索客户',
-                      hintStyle: TextStyle(color: hintTextColor),
-                      // 条件显示清空按钮
-                      suffixIcon: hasText 
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, color: Color(0xFF999999), size: 20),
-                              splashRadius: 20,
-                              onPressed: () {
-                                // 清空输入框
-                                _customerSearchController.clear();
-                                // 重置选中客户
-                                setState(() {
-                                  _selectedCustomer = null;
-                                });
-                                // 重新显示所有客户
-                                _filterCustomers('');
-                                // 显示下拉框以便重新选择
-                                _showOverlay(context);
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: borderColor),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: borderColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: primaryColor),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF333333),
-                    ),
-                    onTap: () {
-                      // 确保点击输入框时显示下拉框
-                      _showOverlay(context);
-                    },
-                    onChanged: (value) {
-                      // 在文本改变时过滤客户并显示下拉框
-                      _filterCustomers(value);
-                      if (_overlayEntry == null) {
-                        _showOverlay(context);
-                      }
-                    },
-                  );
+          child: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _customerSearchController,
+            builder: (context, value, child) {
+              // 根据输入框内容决定是否显示清空按钮
+              final bool hasText = value.text.isNotEmpty;
+              return TextField(
+                controller: _customerSearchController,
+                focusNode: _customerFocusNode,
+                decoration: InputDecoration(
+                  hintText: '请选择或搜索客户',
+                  hintStyle: TextStyle(color: hintTextColor),
+                  // 条件显示清空按钮
+                  suffixIcon: hasText 
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Color(0xFF999999), size: 20),
+                          splashRadius: 20,
+                          onPressed: () {
+                            // 清空输入框
+                            _customerSearchController.clear();
+                            // 重置选中客户
+                            setState(() {
+                              _selectedCustomer = null;
+                            });
+                            // 重新显示所有客户
+                            _filterCustomers('');
+                            // 显示下拉框以便重新选择
+                            _showOverlay(context);
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: borderColor),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: borderColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: ThemeColors.primaryColor),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF333333),
+                ),
+                onTap: () {
+                  // 确保点击输入框时显示下拉框
+                  _showOverlay(context);
                 },
-              ),
-            ),
+                onChanged: (value) {
+                  // 在文本改变时过滤客户并显示下拉框
+                  _filterCustomers(value);
+                  if (_overlayEntry == null) {
+                    _showOverlay(context);
+                  }
+                },
+              );
+            },
           ),
         ),
         const SizedBox(width: 16),
@@ -761,7 +899,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
               }
             },
             style: TextButton.styleFrom(
-              foregroundColor: primaryColor,
+              foregroundColor: ThemeColors.primaryColor,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
           ),
@@ -771,7 +909,6 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
 
   // 修改表单字段布局 - 调整间距和对齐
   Widget _buildFormField(EditableInfo info, Color defaultButtonColor, Color hintTextColor, Color borderColor) {
-    const Color primaryColor = Color(0xFF4CAF50);
     final controller = _controllers[info.key];
     if (controller == null) return const SizedBox.shrink();
 
@@ -794,9 +931,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
         const SizedBox(width: 12),
         // 输入框部分
         Expanded(
-          child: info.isSelectable && info.options != null
-              ? _buildDropdown(info, controller, hintTextColor, borderColor)
-              : _buildTextField(info, controller, hintTextColor, borderColor),
+          child: _buildInputField(info, controller, hintTextColor, borderColor),
         ),
         // 设为默认按钮
         if (info.supportDefault && _selectedCustomer != null) ...[
@@ -807,18 +942,189 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
     );
   }
 
+  Widget _buildInputField(EditableInfo info, TextEditingController controller, Color hintTextColor, Color borderColor) {
+    switch (info.type) {
+      case EditableType.dropdown:
+       return _buildDropdown(info, controller, hintTextColor, borderColor);
+      case EditableType.date:
+       return _buildDateField(info, controller, hintTextColor, borderColor);
+      default:
+       return _buildTextField(info, controller, hintTextColor, borderColor);
+    };
+  }
+
+  // 构建日期选择字段
+  Widget _buildDateField(EditableInfo info, TextEditingController controller, Color hintTextColor, Color borderColor) {
+    return Builder(
+      builder: (context) => FormField<String>(
+        initialValue: controller.text,
+        validator: (value) {
+          if ((value == null || value.isEmpty) && info.isRequired) {
+            return '请选择${info.name}';
+          }
+          return null;
+        },
+        builder: (FormFieldState<String> field) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: () async {
+                  // 隐藏所有下拉框
+                  _hideAllDropdownOverlays();
+                  
+                  // 获取当前日期或默认日期
+                  DateTime initialDate;
+                  try {
+                    if (controller.text.isNotEmpty) {
+                      // 尝试解析已有日期文本
+                      List<String> parts = controller.text.split('.');
+                      if (parts.length == 3) {
+                        String monthStr = parts[0];
+                        int day = int.tryParse(parts[1]) ?? 1;
+                        int year = int.tryParse(parts[2]) ?? DateTime.now().year;
+                        
+                        // 将月份缩写转换为月份数字
+                        int month = _getMonthNumber(monthStr);
+                        initialDate = DateTime(year, month, day);
+                      } else {
+                        initialDate = DateTime.now();
+                      }
+                    } else {
+                      initialDate = DateTime.now();
+                    }
+                  } catch (e) {
+                    initialDate = DateTime.now();
+                  }
+                  
+                  // 显示日期选择器
+                  final DateTime? picked = await showDatePicker(
+                    context: context,
+                    initialDate: initialDate,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                    builder: (BuildContext context, Widget? child) {
+                      return Theme(
+                        data: ThemeData.light().copyWith(
+                          primaryColor: ThemeColors.primaryColor,
+                          colorScheme: const ColorScheme.light(
+                            primary: ThemeColors.primaryColor,
+                          ),
+                          buttonTheme: const ButtonThemeData(
+                            textTheme: ButtonTextTheme.primary
+                          ),
+                        ),
+                        child: child!,
+                      );
+                    },
+                  );
+                  
+                  if (picked != null) {
+                    // 格式化日期为指定格式
+                    String formattedDate = _formatDate(picked);
+                    controller.text = formattedDate;
+                    field.didChange(formattedDate);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: field.hasError ? Colors.red : borderColor,
+                      width: field.hasError ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          controller.text.isEmpty ? info.hintText : controller.text,
+                          style: TextStyle(
+                            color: controller.text.isEmpty ? hintTextColor : const Color(0xFF333333),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 20,
+                        color: Color(0xFF999999),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // 显示错误信息
+              if (field.hasError)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, top: 4),
+                  child: Text(
+                    field.errorText!,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+  
+  // 将月份数字转换为3字母缩写（大写）
+  String _formatMonthToAbbr(int month) {
+    const List<String> monthAbbr = [
+      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
+      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
+    ];
+    return monthAbbr[month - 1]; // 月份从1开始，数组从0开始
+  }
+  
+  // 从月份缩写获取月份数字
+  int _getMonthNumber(String monthAbbr) {
+    const List<String> months = [
+      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
+      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
+    ];
+    
+    String upperMonthAbbr = monthAbbr.toUpperCase();
+    for (int i = 0; i < months.length; i++) {
+      if (months[i] == upperMonthAbbr) {
+        return i + 1; // 数组从0开始，月份从1开始
+      }
+    }
+    return 1; // 默认返回1月
+  }
+  
+  // 格式化日期为 "MMM.dd.yyyy" 格式，例如 "MAR.05.2025"
+  String _formatDate(DateTime date) {
+    String month = _formatMonthToAbbr(date.month);
+    String day = date.day.toString().padLeft(2, '0');
+    String year = date.year.toString();
+    return '$month.$day.$year';
+  }
+
   // 构建文本输入框
   Widget _buildTextField(EditableInfo info, TextEditingController controller, Color hintTextColor, Color borderColor) {
-    const Color primaryColor = Color(0xFF4CAF50);
+    
     return TextFormField(
       controller: controller,
-      readOnly: !info.canEdit,
-      enabled: info.canEdit,
+      readOnly: info.type == EditableType.auto,
+      enabled: info.type != EditableType.auto,
       style: const TextStyle(
         color: Color(0xFF333333),
         fontSize: 14,
+        height: 1.5, // 调整行高，使多行文本看起来更舒适
       ),
-      keyboardType: info.isNumber
+      maxLines: null, // 允许无限行数，实现自动换行
+      minLines: 1,    // 最小2行，确保有足够空间
+      textAlignVertical: TextAlignVertical.center, // 设置垂直居中
+      keyboardType: info.type == EditableType.number
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
       decoration: InputDecoration(
@@ -826,6 +1132,9 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
         hintStyle: TextStyle(color: hintTextColor, fontSize: 14),
         filled: true,
         fillColor: Colors.white,
+        alignLabelWithHint: true, // 确保标签与输入提示垂直对齐
+        // 设置内边距使文本看起来垂直居中
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: borderColor, width: 1),
@@ -836,15 +1145,28 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: primaryColor, width: 1.5),
+          borderSide: const BorderSide(color: ThemeColors.primaryColor, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        ),
+        errorStyle: const TextStyle(
+          fontSize: 12,
+          color: Colors.red,
+        ),
       ),
       validator: (value) {
-        if (info.isNumber && value!.isNotEmpty && double.tryParse(value) == null) {
+        // 数字格式验证
+        if (info.type == EditableType.number && value!.isNotEmpty && double.tryParse(value) == null) {
           return '请输入有效的数字';
         }
-        if (value == null || value.isEmpty) {
+        // 必填字段验证
+        if (info.isRequired && (value == null || value.isEmpty)) {
           return '请输入${info.name}';
         }
         return null;
@@ -854,14 +1176,28 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
 
   // 修改设为默认按钮为文字按钮
   Widget _buildDefaultButton(EditableInfo info, TextEditingController controller, Color defaultButtonColor) {
+    // 检查此特定字段是否已有保存的默认值
+    String? savedValue = _prefs.getString('${_selectedCustomer!.id}_${info.key}');
+    
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: controller,
       builder: (context, value, child) {
         final bool hasValue = value.text.isNotEmpty;
+        
+        // 判断当前值是否与保存的默认值相同
+        final bool isSameAsDefault = savedValue != null && savedValue == value.text;
+        
+        // 只有当值存在且与保存的默认值相同时才显示"已默认"
+        final bool showAsDefault = isSameAsDefault;
+        
         return TextButton(
           onPressed: hasValue
               ? () async {
                   await _saveDefaultValue(info.key, controller.text);
+                  // 不需要修改全局状态，因为实时通过ValueListenableBuilder响应值的变化
+                  setState(() {
+                    
+                  });
                 }
               : null,
           style: TextButton.styleFrom(
@@ -870,7 +1206,7 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
             minimumSize: const Size(80, 36),
             textStyle: const TextStyle(fontSize: 13),
           ),
-          child: const Text('设为默认'),
+          child: Text(showAsDefault ? '已默认' : '设为默认'),
         );
       },
     );
@@ -945,4 +1281,5 @@ class _TemplateEditPageState extends State<TemplateEditPage> {
       }
     }
   }
+
 }

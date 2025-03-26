@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as path;
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'tips_view.dart';
+import '../models/theme_colors.dart';
 
 class TemplateDetailPage extends StatefulWidget {
   final TemplateModel template;
@@ -232,15 +234,17 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.template.name),
+        title: Center(
+          child: Text(widget.template.name),
+        ),
         actions: [
           if (!kIsWeb)
             IconButton(
-              icon: const Icon(Icons.share),
+              icon: const Icon(Icons.share, color: ThemeColors.primaryColor),
               onPressed: _handleShare,
             ),
           IconButton(
-            icon: const Icon(Icons.download),
+            icon: const Icon(Icons.download, color: ThemeColors.primaryColor),
             onPressed: _downloadDocument,
           ),
           const SizedBox(width: 16),
@@ -248,19 +252,7 @@ class _TemplateDetailPageState extends State<TemplateDetailPage> {
       ),
       body: Column(
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(8),
-            color: Color(0xFF4CAF50).withOpacity(0.05),
-            child: const Text(
-              '以下为预览效果，标有颜色的为修改的部分',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+          const TipsView(text: '注意：以下为预览效果，标有颜色的为修改的部分，下载或分享都不带颜色'),
           Expanded(
             child: _isLoading
                 ? _buildPreviewLoadingView()

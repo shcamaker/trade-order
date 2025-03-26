@@ -99,4 +99,3 @@ flutter:
   # 标准的资源配置方式
   assets:
     - assets/
-    - assets/templates/templates.json
